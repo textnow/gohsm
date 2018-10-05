@@ -5,76 +5,18 @@ import (
 )
 
 var (
+	// ErrAlreadyRegistered is returned if you attempt to register an event handler that is already registered.
 	ErrAlreadyRegistered = errors.New("already registered")
 )
 
-type Handler interface {
-	OnEnter()
-	OnExit()
-}
-
-type Event interface {
-	ID() string
-}
-
-type BaseEvent struct {
-	name string
-}
-func (be *BaseEvent) ID() string {
-	return be.name
-}
-
-type Action func()
-
-var StartEvent = &BaseEvent{"Start"}
-var EndEvent = &BaseEvent{"End"}
-
-func EmptyAction() {
-}
-
-type EmptyHandler struct {
-}
-func (eh *EmptyHandler) OnEnter() {
-}
-func (eh *EmptyHandler) OnExit() {
-}
-
-type Transition interface {
-	NextState() *State
-}
-
-type DirectTransition struct {
-	next *State
-}
-func NewDirectTransition(next *State) *DirectTransition {
-	return &DirectTransition{
-		next: next,
-	}
-}
-func (dt *DirectTransition) NextState() *State {
-	return dt.next
-}
-
-type ConditionalTransition struct {
-	next func() *State
-}
-func NewConditionalTransition(next func() *State) *ConditionalTransition {
-	return &ConditionalTransition{
-		next: next,
-	}
-}
-func (ct *ConditionalTransition) NextState() *State {
-	return ct.next()
-}
-
-var EndTransition = &DirectTransition{}
-
-
+// eventHandler is an internal representation of an event handler.
+// If transition is nil it represents an internal transition.
 type eventHandler struct {
-	action Action
+	action     Action
 	transition Transition
 }
 
+// State represents a single state in the state machine. It may have a sub state machine.
 type State struct {
 	name          string
 	handler       Handler
@@ -83,6 +25,7 @@ type State struct {
 	subStateMachine *StateMachine
 }
 
+// NewState creates a new named state that will trigger the supplied handler when entered/left.
 func NewState(name string, handler Handler) *State {
 	if handler == nil {
 		handler = &EmptyHandler{}
@@ -94,6 +37,8 @@ func NewState(name string, handler Handler) *State {
 	}
 }
 
+// NewStateWithSubStateMachine creates a new named state that will trigger the suppled handler, along with
+// a child state machine that will trigger when this state is active.
 func NewStateWithSubStateMachine(name string, handler Handler, subStateMachine *StateMachine) *State {
 	if handler == nil {
 		handler = &EmptyHandler{}
@@ -106,48 +51,53 @@ func NewStateWithSubStateMachine(name string, handler Handler, subStateMachine *
 	}
 }
 
+// SetExternalTransition adds a transition to the state that will cause this state to be left when the specified event occurs.
 func (is *State) SetExternalTransition(e Event, a Action, t Transition) error {
 	if _, ok := is.eventHandlers[e.ID()]; ok {
 		return ErrAlreadyRegistered
 	}
 
 	is.eventHandlers[e.ID()] = eventHandler{
-		action: a,
+		action:     a,
 		transition: t,
 	}
 	return nil
 }
 
+// SetInternalTransition adds a transition to the state that will cause this action to be triggered when the specified event occurs.
 func (is *State) SetInternalTransition(e Event, a Action) error {
 	if _, ok := is.eventHandlers[e.ID()]; ok {
 		return ErrAlreadyRegistered
 	}
 
 	is.eventHandlers[e.ID()] = eventHandler{
-		action: a,
+		action:     a,
 		transition: nil,
 	}
 	return nil
 }
 
+// StateMachine is an instance of a state machine. It maintains the transitions required for states.
 type StateMachine struct {
 	start *State
-	curr *State
+	curr  *State
 }
 
+// NewStateMachine creates a new state machine. The supplied transition is executed when the state machine is first started (its owning state is entered).
 func NewStateMachine(t Transition) *StateMachine {
 	start := NewState("internal_start", nil)
 	start.eventHandlers[StartEvent.ID()] = eventHandler{
-		action: nil,
+		action:     nil,
 		transition: t,
 	}
 
 	return &StateMachine{
 		start: start,
-		curr: start,
+		curr:  start,
 	}
 }
 
+// currentState is an internal handler that returns the current state (or state of a sub state machine if set).
 func (sm *StateMachine) currentState() *State {
 	if sm.curr == nil {
 		return nil
@@ -155,11 +105,13 @@ func (sm *StateMachine) currentState() *State {
 
 	if sm.curr.subStateMachine != nil {
 		return sm.curr.subStateMachine.currentState()
-	} else {
-		return sm.curr
 	}
+	return sm.curr
 }
 
+// handleEvent handles the supplied event.
+// If the state machine doesn't have this event registered, and any sub state machines don't have this event registered, false will be returned.
+// If the state is registered it will be handled and return true.
 func (sm *StateMachine) handleEvent(e Event) bool {
 	// Do not attempt to handle the event if we're done (i.e. no current state left).
 	if sm.curr == nil {
@@ -182,14 +134,14 @@ func (sm *StateMachine) handleEvent(e Event) bool {
 	// This means we have an external transition.
 	if ev.transition != nil {
 		if sm.curr.subStateMachine != nil && sm.curr.subStateMachine.curr != nil {
-			sm.curr.subStateMachine.curr.handler.OnExit()
+			sm.curr.subStateMachine.curr.handler.OnExit(e)
 		}
 		if sm.curr.subStateMachine != nil {
 			// Set this state machine up to be re-entered
 			sm.curr.subStateMachine.curr = sm.curr.subStateMachine.start
 		}
 
-		sm.curr.handler.OnExit()
+		sm.curr.handler.OnExit(e)
 	}
 
 	if ev.action != nil {
@@ -204,7 +156,7 @@ func (sm *StateMachine) handleEvent(e Event) bool {
 			return true
 		}
 
-		sm.curr.handler.OnEnter()
+		sm.curr.handler.OnEnter(e)
 
 		if sm.curr.subStateMachine != nil {
 			sm.curr.subStateMachine.handleEvent(StartEvent)
@@ -214,20 +166,20 @@ func (sm *StateMachine) handleEvent(e Event) bool {
 	return true
 }
 
+// StateMachineEngine represents an instance of an executable state machine engine.
 type StateMachineEngine struct {
 	sm *StateMachine
 }
 
+// NewStateMachineEngine creates a new instance of the state machine engine with the specified state as the base.
 func NewStateMachineEngine(sm *StateMachine) *StateMachineEngine {
 	return &StateMachineEngine{
 		sm: sm,
 	}
 }
 
-func (sme *StateMachineEngine) dispatchEvent(e Event) {
-	sme.sm.handleEvent(e)
-}
-
+// Run sets up the state machine engine, primes the state machine with its start event
+// and then continues to read from the supplied channel until its closed.
 func (sme *StateMachineEngine) Run(events <-chan Event) {
 	sme.sm.handleEvent(StartEvent)
 
@@ -237,7 +189,6 @@ func (sme *StateMachineEngine) Run(events <-chan Event) {
 			return
 		}
 
-		sme.dispatchEvent(e)
+		sme.sm.handleEvent(e)
 	}
 }
-

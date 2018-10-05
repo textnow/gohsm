@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/rmrobinson-textnow/gohsm"
 	"fmt"
 	"time"
+
+	"github.com/rmrobinson-textnow/gohsm"
 )
 
 func action1() {
@@ -30,36 +31,49 @@ func action7() {
 
 type eventA struct {
 }
+
 func (a *eventA) ID() string {
 	return "a"
 }
+
 type eventB struct {
 }
+
 func (b *eventB) ID() string {
 	return "b"
 }
+
 type eventC struct {
 }
+
 func (c *eventC) ID() string {
 	return "c"
 }
+
 type eventD struct {
 }
+
 func (d *eventD) ID() string {
 	return "d"
 }
+
 type eventE struct {
 }
+
 func (e *eventE) ID() string {
 	return "e"
 }
+
 type eventX struct {
 }
+
 func (x *eventX) ID() string {
 	return "x"
 }
+
 type eventY struct {
 }
+
 func (y *eventY) ID() string {
 	return "y"
 }
@@ -67,49 +81,41 @@ func (y *eventY) ID() string {
 type stateA struct {
 	A bool
 }
-func (a *stateA) Name() string {
-	return "State A"
-}
-func (a *stateA) OnEnter() {
+
+func (a *stateA) OnEnter(hsm.Event) {
 	fmt.Printf("->A\n")
 }
-func (a *stateA) OnExit() {
+func (a *stateA) OnExit(hsm.Event) {
 	fmt.Printf("<-A\n")
 }
 
 type stateB struct {
 }
-func (b *stateB) Name() string {
-	return "State B"
-}
-func (b *stateB) OnEnter() {
+
+func (b *stateB) OnEnter(hsm.Event) {
 	fmt.Printf("->B\n")
 }
-func (b *stateB) OnExit() {
+func (b *stateB) OnExit(hsm.Event) {
 	fmt.Printf("<-B\n")
 }
 
 type stateC struct {
 }
-func (c *stateC) Name() string {
-	return "State C"
-}
-func (c *stateC) OnEnter() {
+
+func (c *stateC) OnEnter(hsm.Event) {
 	fmt.Printf("->C\n")
 }
-func (c *stateC) OnExit() {
+func (c *stateC) OnExit(hsm.Event) {
 	fmt.Printf("<-C\n")
 }
 
 type stateD struct {
 }
-func (d *stateD) Name() string {
-	return "State D"
-}
-func (d *stateD) OnEnter() {
+
+func (d *stateD) OnEnter(hsm.Event) {
 	fmt.Printf("->D\n")
 }
-func (d *stateD) OnExit() {
+func (d *stateD) OnExit(hsm.Event) {
 	fmt.Printf("<-D\n")
 }
 
