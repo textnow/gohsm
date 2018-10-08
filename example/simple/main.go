@@ -139,12 +139,8 @@ func main() {
 	a.SetExternalTransition(ec, action3, hsm.NewDirectTransition(a))
 	a.SetExternalTransition(ed, action4, hsm.NewDirectTransition(d))
 
-	root := hsm.NewCompositeState("", &hsm.EmptyHandler{}, []hsm.State{
-		a,
-		d,
-	})
-
-	engine := hsm.NewStateMachineEngine(zap.L(), hsm.NewDirectTransition(root))
+	logger, _ := zap.NewDevelopment()
+	engine := hsm.NewStateMachineEngine(logger, hsm.NewDirectTransition(a))
 
 	events := make(chan hsm.Event)
 	go handleInput(events)

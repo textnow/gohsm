@@ -203,7 +203,30 @@ func (sme *StateMachineEngine) resolveTransition(origin State, dest State) ([]St
 		}
 	}
 
-	return nil, nil
+	// No common parent.
+	toExit := originToRoot
+	var toEnter []State
+	for i := len(destToRoot)-1; i >= 0; i-- {
+		toEnter = append(toEnter, destToRoot[i])
+	}
+
+	// DEBUGGING
+	var toExitStr []string
+	for _, state := range toExit {
+		toExitStr = append(toExitStr, state.Name())
+	}
+	var toEnterStr []string
+	for _, state := range toEnter {
+		toEnterStr = append(toEnterStr, state.Name())
+	}
+	sme.logger.Debug("resolved transition (no common parent)",
+		zap.String("origin", origin.Name()),
+		zap.String("destination", dest.Name()),
+		zap.Strings("toExit", toExitStr),
+		zap.Strings("toEnter", toEnterStr),
+	)
+
+	return toExit, toEnter
 }
 
 // handleEvent takes an event and determines how the state machine will handle it.
