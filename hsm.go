@@ -2,6 +2,7 @@ package hsm
 
 import (
 	"errors"
+	"go.uber.org/zap"
 )
 
 var (
@@ -9,179 +10,34 @@ var (
 	ErrAlreadyRegistered = errors.New("already registered")
 )
 
-// eventHandler is an internal representation of an event handler.
-// If transition is nil it represents an internal transition.
-type eventHandler struct {
-	action     Action
-	transition Transition
-}
-
-// State represents a single state in the state machine. It may have a sub state machine.
-type State struct {
-	name          string
-	handler       Handler
-	eventHandlers map[string]eventHandler
-
-	subStateMachine *StateMachine
-}
-
-// NewState creates a new named state that will trigger the supplied handler when entered/left.
-func NewState(name string, handler Handler) *State {
-	if handler == nil {
-		handler = &EmptyHandler{}
-	}
-	return &State{
-		name:          name,
-		handler:       handler,
-		eventHandlers: map[string]eventHandler{},
-	}
-}
-
-// NewStateWithSubStateMachine creates a new named state that will trigger the suppled handler, along with
-// a child state machine that will trigger when this state is active.
-func NewStateWithSubStateMachine(name string, handler Handler, subStateMachine *StateMachine) *State {
-	if handler == nil {
-		handler = &EmptyHandler{}
-	}
-	return &State{
-		name:            name,
-		handler:         handler,
-		eventHandlers:   map[string]eventHandler{},
-		subStateMachine: subStateMachine,
-	}
-}
-
-// SetExternalTransition adds a transition to the state that will cause this state to be left when the specified event occurs.
-func (is *State) SetExternalTransition(e Event, a Action, t Transition) error {
-	if _, ok := is.eventHandlers[e.ID()]; ok {
-		return ErrAlreadyRegistered
-	}
-
-	is.eventHandlers[e.ID()] = eventHandler{
-		action:     a,
-		transition: t,
-	}
-	return nil
-}
-
-// SetInternalTransition adds a transition to the state that will cause this action to be triggered when the specified event occurs.
-func (is *State) SetInternalTransition(e Event, a Action) error {
-	if _, ok := is.eventHandlers[e.ID()]; ok {
-		return ErrAlreadyRegistered
-	}
-
-	is.eventHandlers[e.ID()] = eventHandler{
-		action:     a,
-		transition: nil,
-	}
-	return nil
-}
-
-// StateMachine is an instance of a state machine. It maintains the transitions required for states.
-type StateMachine struct {
-	start *State
-	curr  *State
-}
-
-// NewStateMachine creates a new state machine. The supplied transition is executed when the state machine is first started (its owning state is entered).
-func NewStateMachine(t Transition) *StateMachine {
-	start := NewState("internal_start", nil)
-	start.eventHandlers[StartEvent.ID()] = eventHandler{
-		action:     nil,
-		transition: t,
-	}
-
-	return &StateMachine{
-		start: start,
-		curr:  start,
-	}
-}
-
-// currentState is an internal handler that returns the current state (or state of a sub state machine if set).
-func (sm *StateMachine) currentState() *State {
-	if sm.curr == nil {
-		return nil
-	}
-
-	if sm.curr.subStateMachine != nil {
-		return sm.curr.subStateMachine.currentState()
-	}
-	return sm.curr
-}
-
-// handleEvent handles the supplied event.
-// If the state machine doesn't have this event registered, and any sub state machines don't have this event registered, false will be returned.
-// If the state is registered it will be handled and return true.
-func (sm *StateMachine) handleEvent(e Event) bool {
-	// Do not attempt to handle the event if we're done (i.e. no current state left).
-	if sm.curr == nil {
-		return false
-	}
-
-	if sm.curr.subStateMachine != nil {
-		if sm.curr.subStateMachine.handleEvent(e) {
-			return true
-		}
-	}
-
-	ev, ok := sm.curr.eventHandlers[e.ID()]
-
-	// The current state doesn't have a handler for this event, so return 'unhandled'
-	if !ok {
-		return false
-	}
-
-	// This means we have an external transition.
-	if ev.transition != nil {
-		if sm.curr.subStateMachine != nil && sm.curr.subStateMachine.curr != nil {
-			sm.curr.subStateMachine.curr.handler.OnExit(e)
-		}
-		if sm.curr.subStateMachine != nil {
-			// Set this state machine up to be re-entered
-			sm.curr.subStateMachine.curr = sm.curr.subStateMachine.start
-		}
-
-		sm.curr.handler.OnExit(e)
-	}
-
-	if ev.action != nil {
-		ev.action()
-	}
-
-	if ev.transition != nil {
-		next := ev.transition.NextState()
-		sm.curr = next
-
-		if next == nil {
-			return true
-		}
-
-		sm.curr.handler.OnEnter(e)
-
-		if sm.curr.subStateMachine != nil {
-			sm.curr.subStateMachine.handleEvent(StartEvent)
-		}
-	}
-
-	return true
-}
-
 // StateMachineEngine represents an instance of an executable state machine engine.
 type StateMachineEngine struct {
-	sm *StateMachine
+	logger *zap.Logger
+
+	t Transition
+
+	curr State
 }
 
 // NewStateMachineEngine creates a new instance of the state machine engine with the specified state as the base.
-func NewStateMachineEngine(sm *StateMachine) *StateMachineEngine {
+func NewStateMachineEngine(logger *zap.Logger, t Transition) *StateMachineEngine {
 	return &StateMachineEngine{
-		sm: sm,
+		logger: logger,
+		t:      t,
+		curr:   nil,
 	}
+}
+
+// CurrentState returns the currently active state.
+func (sme *StateMachineEngine) CurrentState() State {
+	return sme.curr
 }
 
 // Run sets up the state machine engine, primes the state machine with its start event
 // and then continues to read from the supplied channel until its closed.
 func (sme *StateMachineEngine) Run(events <-chan Event) {
-	sme.sm.handleEvent(StartEvent)
+	// This will ensure we are in the proper state starting from the beginning.
+	sme.initialize()
 
 	for {
 		e, ok := <-events
@@ -189,6 +45,211 @@ func (sme *StateMachineEngine) Run(events <-chan Event) {
 			return
 		}
 
-		sme.sm.handleEvent(e)
+		sme.logger.Debug("handling event",
+			zap.String("event_id", e.ID()),
+			zap.String("current_state", sme.curr.Name()),
+		)
+
+		handled := sme.handleEvent(e)
+		if !handled {
+			sme.logger.Debug("event not handled",
+				zap.String("event_id", e.ID()),
+			)
+			continue
+		}
+
+		if sme.curr == EndState {
+			sme.logger.Debug("current state nil, terminating run loop")
+			return
+		}
+
+		sme.logger.Debug("handled event",
+			zap.String("current_state", sme.curr.Name()),
+		)
 	}
+}
+
+func (sme *StateMachineEngine) initialize() {
+	start := sme.t.NextState()
+
+	statesToEnter := append([]State{start}, sme.resolveLeaf(start)...)
+
+	for _, state := range statesToEnter {
+		state.handler().OnEnter(StartEvent)
+	}
+
+	sme.curr = statesToEnter[len(statesToEnter)-1]
+	sme.logger.Debug("state machine initialized",
+		zap.String("starting_state", sme.curr.Name()),
+	)
+}
+
+func (sme *StateMachineEngine) resolveLeaf(curr State) []State {
+	start := curr
+	var statesToEnter []State
+
+	for {
+		if _, ok := curr.(*LeafState); ok {
+			break
+		}
+
+		h := curr.handlerForEvent(StartEvent)
+		if h == nil {
+			sme.logger.Fatal("state lacks handler for Start event",
+				zap.String("state_id", curr.Name()),
+			)
+		}
+
+		curr = h.transition.NextState()
+		statesToEnter = append(statesToEnter, curr)
+	}
+
+	// DEBUGGING
+	var states []string
+	for _, state := range statesToEnter {
+		states = append(states, state.Name())
+	}
+	sme.logger.Debug("resolved leaf",
+		zap.String("origin", start.Name()),
+		zap.Strings("path", states),
+	)
+
+	return statesToEnter
+}
+
+func (sme *StateMachineEngine) resolveTransition(origin State, dest State) ([]State, []State) {
+	if origin == nil {
+		sme.logger.Fatal("sme called with nil origin")
+	} else if dest == nil {
+		sme.logger.Fatal("sme called with nil dest",
+			zap.String("origin_name", origin.Name()),
+		)
+	}
+
+	// A self external transition
+	if origin == dest {
+		return []State{origin}, []State{dest}
+	} else if origin.parent() == dest.parent() {
+		return []State{origin}, []State{dest}
+	} else if dest == EndState {
+		return []State{origin}, []State{}
+	}
+
+	var originToRoot []State
+	for i := origin; i != nil; i = i.parent() {
+		sme.logger.Debug("originToRoot",
+			zap.String("name", i.Name()),
+		)
+		originToRoot = append(originToRoot, i)
+	}
+
+	var destToRoot []State
+	for i := dest; i != nil; i = i.parent() {
+		sme.logger.Debug("destToRoot",
+			zap.String("name", i.Name()),
+		)
+		destToRoot = append(destToRoot, i)
+	}
+
+	// We start at the origin. We examine the chain from the root to the dest
+	// If we don't find the origin, proceed up one level and try again.
+	// Once we find a common parent, we will know what we need to leave then exit to execute the transition.
+	for ascIdx, asc := range originToRoot {
+		sme.logger.Debug("asc",
+			zap.String("name", asc.Name()),
+			zap.Int("idx", ascIdx),
+		)
+		for descIdx, desc := range destToRoot {
+			sme.logger.Debug("desc",
+				zap.String("name", desc.Name()),
+				zap.Int("idx", descIdx),
+			)
+
+			if asc == desc {
+				sme.logger.Debug("found match")
+
+				toExit := originToRoot[:ascIdx+1]
+				var toEnter []State
+				for i := descIdx; i >= 0; i-- {
+					toEnter = append(toEnter, destToRoot[i])
+				}
+
+				// DEBUGGING
+				var toExitStr []string
+				for _, state := range toExit {
+					toExitStr = append(toExitStr, state.Name())
+				}
+				var toEnterStr []string
+				for _, state := range toEnter {
+					toEnterStr = append(toEnterStr, state.Name())
+				}
+				sme.logger.Debug("resolved transition",
+					zap.String("origin", origin.Name()),
+					zap.String("destination", dest.Name()),
+					zap.Strings("toExit", toExitStr),
+					zap.Strings("toEnter", toEnterStr),
+				)
+
+				return toExit, toEnter
+			}
+		}
+	}
+
+	return nil, nil
+}
+
+func (sme *StateMachineEngine) handleEvent(e Event) bool {
+	var toLeave []State
+	var toEnter []State
+
+	for curr := sme.curr; curr != nil; curr = curr.parent() {
+		eh := curr.handlerForEvent(e)
+
+		if eh == nil {
+			toLeave = append(toLeave, curr)
+			sme.logger.Debug("no registered handler for event, going up a level",
+				zap.String("state_name", curr.Name()),
+				zap.String("event_name", e.ID()),
+			)
+			continue
+		}
+
+		next := curr
+		if eh.transition != nil {
+			next = eh.transition.NextState()
+
+			currToLeave, currToEnter := sme.resolveTransition(curr, next)
+			toLeave = append(toLeave, currToLeave...)
+			toEnter = append(toEnter, currToEnter...)
+
+			// If we transition to a non-leaf state, we will need to get to the end of the set
+			toEnter = append(toEnter, sme.resolveLeaf(next)...)
+			if len(toEnter) > 0 {
+				next = toEnter[len(toEnter)-1]
+			}
+
+			for _, s := range toLeave {
+				sme.logger.Debug("toExit",
+					zap.String("name", s.Name()),
+				)
+				s.handler().OnExit(e)
+			}
+		}
+
+		eh.action()
+
+		if eh.transition != nil {
+			for _, s := range toEnter {
+				sme.logger.Debug("toEnter",
+					zap.String("name", s.Name()),
+				)
+				s.handler().OnEnter(e)
+			}
+
+			sme.curr = next
+		}
+		return true
+	}
+
+	return false
 }
