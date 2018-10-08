@@ -1,5 +1,7 @@
 # gohsm
 
+## Introduction
+
 This library provides a Golang implementation of a Hierarchical State Machine (HSM). This library uses several sources for implementation specification, including:
  - [Miro Samek](https://barrgroup.com/Embedded-Systems/How-To/Introduction-Hierarchical-State-Machines)
  - [Stefan Heinzmann](https://accu.org/index.php/journals/252)
@@ -22,3 +24,10 @@ A LeafState instance represents a state with no sub-states; a CompositeState ins
 Transitions represent different ways to get from one state to another. The default transition is a direct transition, which simply goes from the origin state to the destination state. If more complex logic is required, a conditional transition can be used. Conditional transitions will invoke a method supplied during initialization to determine which state to transition to.
 
 This library does not currently implement guard conditions on transitions.
+
+## How To Use
+
+1. Define the set of events that will be processed.
+2. Define all of the states that are possible. Start with the leaf states, then work upwards to the top state, as this will ensure you can always supply the state into its parents constructor.
+3. Define the state transitions once all of the states have been declared (and group the transitions by the starting state). This will make it much easier to reason about transitions that are occurring.
+4. Create the state machine engine, and then begin processing events.

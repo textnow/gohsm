@@ -100,13 +100,6 @@ func handleInput(events chan hsm.Event) {
 }
 
 func main() {
-	sd := &stateD{}
-	sc := &stateC{}
-	sb := &stateB{}
-	sa := &stateA{
-		A: true,
-	}
-
 	ea := &keyPressEvent{"a"}
 	eb := &keyPressEvent{"b"}
 	ec := &keyPressEvent{"c"}
@@ -114,6 +107,13 @@ func main() {
 	ee := &keyPressEvent{"e"}
 	ex := &keyPressEvent{"x"}
 	ey := &keyPressEvent{"y"}
+
+	sd := &stateD{}
+	sc := &stateC{}
+	sb := &stateB{}
+	sa := &stateA{
+		A: true,
+	}
 
 	c := hsm.NewLeafState("C", sc)
 	c.SetExternalTransition(ex, action6, hsm.NewDirectTransition(c))
