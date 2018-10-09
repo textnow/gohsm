@@ -1,81 +1,36 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/rmrobinson-textnow/gohsm"
+	"go.uber.org/zap"
 )
 
 func action1() {
-	fmt.Printf("Action1\n")
+	fmt.Printf("\nAction1\n")
 }
 func action2() {
-	fmt.Printf("Action2\n")
+	fmt.Printf("\nAction2\n")
 }
 func action3() {
-	fmt.Printf("Action3\n")
+	fmt.Printf("\nAction3\n")
 }
 func action4() {
-	fmt.Printf("Action4\n")
+	fmt.Printf("\nAction4\n")
 }
 func action5() {
-	fmt.Printf("Action5\n")
+	fmt.Printf("\nAction5\n")
 }
 func action6() {
-	fmt.Printf("Action6\n")
+	fmt.Printf("\nAction6\n")
 }
 func action7() {
-	fmt.Printf("Action7\n")
-}
-
-type eventA struct {
-}
-
-func (a *eventA) ID() string {
-	return "a"
-}
-
-type eventB struct {
-}
-
-func (b *eventB) ID() string {
-	return "b"
-}
-
-type eventC struct {
-}
-
-func (c *eventC) ID() string {
-	return "c"
-}
-
-type eventD struct {
-}
-
-func (d *eventD) ID() string {
-	return "d"
-}
-
-type eventE struct {
-}
-
-func (e *eventE) ID() string {
-	return "e"
-}
-
-type eventX struct {
-}
-
-func (x *eventX) ID() string {
-	return "x"
-}
-
-type eventY struct {
-}
-
-func (y *eventY) ID() string {
-	return "y"
+	fmt.Printf("\nAction7\n")
 }
 
 type stateA struct {
@@ -83,43 +38,76 @@ type stateA struct {
 }
 
 func (a *stateA) OnEnter(hsm.Event) {
-	fmt.Printf("->A\n")
+	fmt.Printf("->A;")
 }
 func (a *stateA) OnExit(hsm.Event) {
-	fmt.Printf("<-A\n")
+	fmt.Printf("<-A;")
 }
 
 type stateB struct {
 }
 
 func (b *stateB) OnEnter(hsm.Event) {
-	fmt.Printf("->B\n")
+	fmt.Printf("->B;")
 }
 func (b *stateB) OnExit(hsm.Event) {
-	fmt.Printf("<-B\n")
+	fmt.Printf("<-B;")
 }
 
 type stateC struct {
+	hsm.LeafState
 }
 
 func (c *stateC) OnEnter(hsm.Event) {
-	fmt.Printf("->C\n")
+	fmt.Printf("->C;")
 }
 func (c *stateC) OnExit(hsm.Event) {
-	fmt.Printf("<-C\n")
+	fmt.Printf("<-C;")
 }
 
 type stateD struct {
 }
 
 func (d *stateD) OnEnter(hsm.Event) {
-	fmt.Printf("->D\n")
+	fmt.Printf("->D;")
 }
 func (d *stateD) OnExit(hsm.Event) {
-	fmt.Printf("<-D\n")
+	fmt.Printf("<-D;")
+}
+
+type keyPressEvent struct {
+	input string
+}
+
+func (kpe *keyPressEvent) ID() string {
+	return kpe.input
+}
+
+func handleInput(events chan hsm.Event) {
+	for {
+		// Wait for the output to stabilize before proceeding
+		time.Sleep(time.Millisecond * 100)
+		fmt.Print("\nEnter text: ")
+		reader := bufio.NewReader(os.Stdin)
+		text, _ := reader.ReadString('\n')
+
+		fmt.Println(text)
+
+		events <- &keyPressEvent{
+			input: strings.Trim(text, "\n"),
+		}
+	}
 }
 
 func main() {
+	ea := &keyPressEvent{"a"}
+	eb := &keyPressEvent{"b"}
+	ec := &keyPressEvent{"c"}
+	ed := &keyPressEvent{"d"}
+	ee := &keyPressEvent{"e"}
+	ex := &keyPressEvent{"x"}
+	ey := &keyPressEvent{"y"}
+
 	sd := &stateD{}
 	sc := &stateC{}
 	sb := &stateB{}
@@ -127,54 +115,35 @@ func main() {
 		A: true,
 	}
 
-	ea := &eventA{}
-	eb := &eventB{}
-	ec := &eventC{}
-	ed := &eventD{}
-	ee := &eventE{}
-	ex := &eventX{}
-	ey := &eventY{}
-
-	c := hsm.NewState("C", sc)
+	c := hsm.NewLeafState("C", sc)
 	c.SetExternalTransition(ex, action6, hsm.NewDirectTransition(c))
 	c.SetInternalTransition(ey, action7)
 
-	b := hsm.NewState("B", sb)
+	b := hsm.NewLeafState("B", sb)
 	b.SetExternalTransition(ea, action1, hsm.NewDirectTransition(c))
 
-	smaChild := hsm.NewStateMachine(hsm.NewConditionalTransition(func() *hsm.State {
-		if sa.A {
-			return b
-		} else {
-			return c
-		}
-	}))
-
-	d := hsm.NewState("D", sd)
+	d := hsm.NewLeafState("D", sd)
 	d.SetExternalTransition(ee, action5, hsm.EndTransition)
 
-	a := hsm.NewStateWithSubStateMachine("A", sa, smaChild)
+	a := hsm.NewCompositeStateWithTransition("A", sa, []hsm.State{
+		b,
+		c,
+	}, hsm.NewConditionalTransition(func() hsm.State {
+		if sa.A {
+			return b
+		}
+		return c
+	}))
+
 	a.SetInternalTransition(eb, action2)
 	a.SetExternalTransition(ec, action3, hsm.NewDirectTransition(a))
 	a.SetExternalTransition(ed, action4, hsm.NewDirectTransition(d))
 
-	sma := hsm.NewStateMachine(hsm.NewDirectTransition(a))
+	logger, _ := zap.NewDevelopment()
+	engine := hsm.NewStateMachineEngine(logger, hsm.NewDirectTransition(a))
 
-	engine := hsm.NewStateMachineEngine(sma)
-
-	events := make(chan hsm.Event, 20)
-	events <- ea
-	events <- eb
-	events <- ec
-	events <- ea
-	events <- ex
-	events <- ey
-
-	go func() {
-		time.Sleep(time.Second)
-		close(events)
-	}()
-
+	events := make(chan hsm.Event)
+	go handleInput(events)
 	engine.Run(events)
 	fmt.Printf("Done\n")
 }
