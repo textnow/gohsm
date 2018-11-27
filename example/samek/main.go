@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"github.com/rmrobinson-textnow/gohsm"
 	"go.uber.org/zap"
@@ -88,6 +89,10 @@ func handleInput(events chan hsm.Event) {
 
 		fmt.Println(text)
 
+		if text == "done\n" {
+			break
+		}
+
 		events <- &keyPressEvent{
 			input: strings.Trim(text, "\n"),
 		}
@@ -145,6 +150,6 @@ func main() {
 	sme := hsm.NewStateMachineEngine(zap.L(), hsm.NewDirectTransition(s0))
 
 	events := make(chan hsm.Event)
-	go handleInput(events)
-	sme.Run(events)
+	sme.Run(context.TODO(), events)
+	handleInput(events)
 }
