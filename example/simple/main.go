@@ -55,7 +55,6 @@ func (b *stateB) OnExit(hsm.Event) {
 }
 
 type stateC struct {
-	hsm.LeafState
 }
 
 func (c *stateC) OnEnter(hsm.Event) {
