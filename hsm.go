@@ -206,7 +206,7 @@ func (sme *StateMachineEngine) resolveTransition(origin State, dest State) ([]St
 	// No common parent.
 	toExit := originToRoot
 	var toEnter []State
-	for i := len(destToRoot)-1; i >= 0; i-- {
+	for i := len(destToRoot) - 1; i >= 0; i-- {
 		toEnter = append(toEnter, destToRoot[i])
 	}
 
