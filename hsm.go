@@ -1,6 +1,7 @@
 package hsm
 
 import (
+	"context"
 	"errors"
 	"go.uber.org/zap"
 )
@@ -21,11 +22,15 @@ type StateMachineEngine struct {
 
 // NewStateMachineEngine creates a new instance of the state machine engine with the specified state as the base.
 func NewStateMachineEngine(logger *zap.Logger, t Transition) *StateMachineEngine {
-	return &StateMachineEngine{
+	sme := &StateMachineEngine{
 		logger: logger,
 		t:      t,
 		curr:   nil,
 	}
+	// This will ensure we are in the proper state starting from the beginning.
+	sme.initialize()
+	return sme
+
 }
 
 // CurrentState returns the currently active state.
@@ -33,40 +38,59 @@ func (sme *StateMachineEngine) CurrentState() State {
 	return sme.curr
 }
 
-// Run sets up the state machine engine, primes the state machine with its start event
-// and then continues to read from the supplied channel until its closed.
-func (sme *StateMachineEngine) Run(events <-chan Event) {
-	// This will ensure we are in the proper state starting from the beginning.
-	sme.initialize()
-
-	for {
-		e, ok := <-events
-		if !ok {
-			return
-		}
-
-		sme.logger.Debug("handling event",
+// HandleEvent attempts to synchronously process the supplied event.
+// This is useful in testing contexts or when the Run() method of subscribing to a channel is not used.
+func (sme *StateMachineEngine) HandleEvent(e Event) {
+	handled := sme.handleEvent(e)
+	if !handled {
+		sme.logger.Debug("event not handled",
 			zap.String("event_id", e.ID()),
-			zap.String("current_state", sme.curr.Name()),
 		)
-
-		handled := sme.handleEvent(e)
-		if !handled {
-			sme.logger.Debug("event not handled",
-				zap.String("event_id", e.ID()),
-			)
-			continue
-		}
-
-		if sme.curr == EndState {
-			sme.logger.Debug("current state nil, terminating run loop")
-			return
-		}
-
+	} else {
 		sme.logger.Debug("handled event",
 			zap.String("current_state", sme.curr.Name()),
 		)
 	}
+}
+
+// Run sets up the state machine engine, primes the state machine with its start event
+// and then continues to read from the supplied channel until its closed.
+func (sme *StateMachineEngine) Run(ctx context.Context, events <-chan Event) {
+	go func() {
+		for {
+			select {
+			case e, ok := <-events:
+				if !ok {
+					return
+				}
+
+				sme.logger.Debug("handling event",
+					zap.String("event_id", e.ID()),
+					zap.String("current_state", sme.curr.Name()),
+				)
+
+				handled := sme.handleEvent(e)
+				if !handled {
+					sme.logger.Debug("event not handled",
+						zap.String("event_id", e.ID()),
+					)
+					continue
+				}
+
+				if sme.curr == EndState {
+					sme.logger.Debug("current state nil, terminating run loop")
+					return
+				}
+
+				sme.logger.Debug("handled event",
+					zap.String("current_state", sme.curr.Name()),
+				)
+			case <- ctx.Done():
+				sme.logger.Debug("received done on context")
+				return
+			}
+		}
+	}()
 }
 
 func (sme *StateMachineEngine) initialize() {

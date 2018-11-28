@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -92,6 +93,10 @@ func handleInput(events chan hsm.Event) {
 
 		fmt.Println(text)
 
+		if text == "done\n" {
+			break
+		}
+
 		events <- &keyPressEvent{
 			input: strings.Trim(text, "\n"),
 		}
@@ -142,7 +147,8 @@ func main() {
 	engine := hsm.NewStateMachineEngine(logger, hsm.NewDirectTransition(a))
 
 	events := make(chan hsm.Event)
-	go handleInput(events)
-	engine.Run(events)
+	engine.Run(context.TODO(), events)
+
+	handleInput(events)
 	fmt.Printf("Done\n")
 }
