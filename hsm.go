@@ -122,7 +122,7 @@ func (sme *StateMachineEngine) resolveLeaf(curr State) []State {
 
 		h := curr.handlerForEvent(StartEvent)
 		if h == nil {
-			sme.logger.Fatal("state lacks handler for Start event",
+			sme.logger.Warn("state lacks handler for Start event",
 				zap.String("state_id", curr.Name()),
 			)
 			return nil
@@ -149,10 +149,10 @@ func (sme *StateMachineEngine) resolveLeaf(curr State) []State {
 // when transitioning from origin to dest. Both origin and dest must be valid states.
 func (sme *StateMachineEngine) resolveTransition(origin State, dest State) ([]State, []State) {
 	if origin == nil {
-		sme.logger.Fatal("sme called with nil origin")
+		sme.logger.Warn("sme called with nil origin")
 		return nil, nil
 	} else if dest == nil {
-		sme.logger.Fatal("sme called with nil dest",
+		sme.logger.Warn("sme called with nil dest",
 			zap.String("origin_name", origin.Name()),
 		)
 		return nil, nil
