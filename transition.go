@@ -1,49 +1,89 @@
 package hsm
 
-// Transition represents a possible way of going from one state to another.
-// It contains the logic used to determine what the next step will be.
+// Action is a type representing a function to be executed on a transition.
+type Action func()
+
+// NopAction is a no-op action
+var NopAction = func() {}
+
 type Transition interface {
-	NextState() State
+	execute(fromStateEngine *StateEngine) *StateEngine
 }
 
-// DirectTransition represents a straightforward transition where the next state is known a priori.
-type DirectTransition struct {
-	next State
+type ExternalTransition struct {
+	event         Event
+	toStateEngine *StateEngine
+	action        Action
 }
 
-// NewDirectTransition creates a new direct transition using the supplied state as the destination state.
-func NewDirectTransition(next State) *DirectTransition {
-	return &DirectTransition{
-		next: next,
+func NewExternalTransition(event Event, toStateEngine *StateEngine, action Action) *ExternalTransition {
+	return &ExternalTransition{
+		event:         event,
+		toStateEngine: toStateEngine,
+		action:        action,
 	}
 }
 
-// NextState returns the saved next state.
-func (dt *DirectTransition) NextState() State {
-	return dt.next
+func (t *ExternalTransition) execute(fromStateEngine *StateEngine) *StateEngine {
+	// Call OnExit starting with the fromStateEngine and all parentStateEngines
+	// until parentStateEngine is nil or equal to the toState's parentStateEngine
+	parentStateEngine := fromStateEngine.GetState().OnExit(t.event)
+	for parentStateEngine != nil &&
+		(t.toStateEngine.GetParentStateEngine() == nil ||
+			parentStateEngine.Name() != t.toStateEngine.GetParentStateEngine().Name()) {
+		parentStateEngine = parentStateEngine.GetState().OnExit(t.event)
+	}
+
+	// Execute action on transition
+	t.action()
+
+	// Enter toState and return new currentState
+	return t.toStateEngine.GetState().OnEnter(t.event)
 }
 
-// ConditionalEvaluator is a function that will return the desired state using its own evaluation criteria.
-type ConditionalEvaluator func() State
-
-// ConditionalTransition represents a transition where the outcome state depends on a method evaluation.
-type ConditionalTransition struct {
-	next ConditionalEvaluator
+type InternalTransition struct {
+	event  Event
+	action Action
 }
 
-// NewConditionalTransition creates a new conditional transition using the supplied evaluator method.
-func NewConditionalTransition(next ConditionalEvaluator) *ConditionalTransition {
-	return &ConditionalTransition{
-		next: next,
+func NewInternalTransition(event Event, action Action) *InternalTransition {
+	return &InternalTransition{
+		event:  event,
+		action: action,
 	}
 }
 
-// NextState returns the calculated next state.
-func (ct *ConditionalTransition) NextState() State {
-	return ct.next()
+func (t *InternalTransition) execute(fromStateEngine *StateEngine) *StateEngine {
+	// Execute action on transition only (OnEnter and OnExit are not called
+	// when executing an internal transition
+	t.action()
+
+	return fromStateEngine
 }
 
-// EndTransition is a convenience variable representing a transition to an end state.
-var EndTransition = &DirectTransition{
-	next: EndState,
+type DaveEndTransition struct {
+	event  Event
+	action Action
+}
+
+func NewEndTransition(event Event, action Action) *DaveEndTransition {
+	return &DaveEndTransition{
+		event:  event,
+		action: action,
+	}
+}
+
+func (t *DaveEndTransition) execute(fromStateEngine *StateEngine) *StateEngine {
+	// Call OnExit starting with the fromStateEngine and all parentStateEngines
+	// until parentStateEngine is nil (final cleanup before state machine exit)
+	parentStateEngine := fromStateEngine.GetState().OnExit(t.event)
+	for parentStateEngine != nil {
+		parentStateEngine = parentStateEngine.GetState().OnExit(t.event)
+	}
+
+	// Execute action on transition
+	t.action()
+
+	// All done - turn out the lights
+	return nil
 }
