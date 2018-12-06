@@ -17,7 +17,7 @@ func NewS211State(parentState *S21State) *S211State {
 	}
 
 	if parentState != nil {
-		parentStateEngine := parentState.GetStateEngine()
+		parentStateEngine := parentState.StateEngine()
 		state.stateEngine = hsm.NewStateEngine(state, parentStateEngine)
 		state.parentStateEngine = parentStateEngine
 	} else {
@@ -38,10 +38,10 @@ func (s *S211State) OnEnter(event hsm.Event) *hsm.StateEngine {
 
 func (s *S211State) OnExit(event hsm.Event) *hsm.StateEngine {
 	fmt.Printf("<-S211;")
-	return s.stateEngine.GetParentStateEngine()
+	return s.stateEngine.ParentStateEngine()
 }
 
-func (s *S211State) GetEventHandler(event hsm.Event) *hsm.EventHandler {
+func (s *S211State) EventHandler(event hsm.Event) *hsm.EventHandler {
 	switch event.ID() {
 	case ed.ID():
 		if s.parentStateEngine != nil {
@@ -49,18 +49,18 @@ func (s *S211State) GetEventHandler(event hsm.Event) *hsm.EventHandler {
 			return hsm.NewEventHandler(transition)
 		} else {
 			toState := NewS21State(nil)
-			transition := hsm.NewExternalTransition(event, toState.GetStateEngine(), hsm.NopAction)
+			transition := hsm.NewExternalTransition(event, toState.StateEngine(), hsm.NopAction)
 			return hsm.NewEventHandler(transition)
 		}
 	case eg.ID():
 		toState := NewS0State()
-		transition := hsm.NewExternalTransition(event, toState.GetStateEngine(), hsm.NopAction)
+		transition := hsm.NewExternalTransition(event, toState.StateEngine(), hsm.NopAction)
 		return hsm.NewEventHandler(transition)
 	default:
 		return nil
 	}
 }
 
-func (s *S211State) GetStateEngine() *hsm.StateEngine {
+func (s *S211State) StateEngine() *hsm.StateEngine {
 	return s.stateEngine
 }

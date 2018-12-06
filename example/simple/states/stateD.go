@@ -34,23 +34,23 @@ func (s *StateD) OnEnter(event hsm.Event) *hsm.StateEngine {
 
 func (s *StateD) OnExit(event hsm.Event) *hsm.StateEngine {
 	fmt.Printf("<-D;")
-	return s.stateEngine.GetParentStateEngine()
+	return s.stateEngine.ParentStateEngine()
 }
 
-func (s *StateD) GetEventHandler(event hsm.Event) *hsm.EventHandler {
+func (s *StateD) EventHandler(event hsm.Event) *hsm.EventHandler {
 	switch event.ID() {
 	case ee.ID():
-		transition := hsm.NewEndTransition(event, daveAction5)
+		transition := hsm.NewEndTransition(event, action5)
 		return hsm.NewEventHandler(transition)
 	default:
 		return nil
 	}
 }
 
-func (s *StateD) GetStateEngine() *hsm.StateEngine {
+func (s *StateD) StateEngine() *hsm.StateEngine {
 	return s.stateEngine
 }
 
-func daveAction5() {
+func action5() {
 	fmt.Printf("\nAction5\n")
 }

@@ -1,3 +1,51 @@
+/*
+HSM provides the framework for Hierarchical State Machine implementations.
+
+Related Documents:
+    - State Driven Development: https://confluence.enflick.com/x/3YwuAg
+    - Go State Machine Framework: https://confluence.enflick.com/x/9AIgAw
+
+Included in this framework are the following components:
+
+  - StateMachineEngine:
+    Engine that controls the state machine event processing
+
+  - StateEngine:
+    State implementation required by the StateMachineEngine to support event processing.  Operations that are
+    common across all states are located in the StateEngine
+
+  - State:
+    Interface that must be implemented by all States in the StateMachine
+
+  - Transition:
+    Interface that is implemented by each of the different types of transitions:
+
+      - ExternalTransition:
+        Transition from current state to a different state.  On execution the following takes place:
+          1. OnExit is called on the current state and all parent states up to the parent state that owns
+             the new state (or the parent state is nil)
+          2. action() associated with the the transition is called
+          3. OnEnter() is called on the new state which may call OnEnter() for a sub-state.  The final
+             new current state is returned by the OnEnter() call
+
+      - InternalTransition:
+        Transition within the current state.  On execution the following takes place:
+          1. action() associated with the the transition is called
+
+      - EndTransition:
+        Transition from current state that terminates the state machine.  On execution the following takes place:
+          1. OnExit is called on the current state and all parent states until there are no more parent states
+          2. action() associated with the the transition is called
+
+  - EventHandler:
+    Wrapper around a transition.  For each event, the StateMachineEngine searches for an EventHandler starting with
+    the current state and then proceeded with each parent state.  If found, then the transition contained in the
+    EventHandler is executed.  Otherwise the event is dropped.
+
+  - Event:
+    An event represents something that has happened (login, logout, newCall, networkChange, etc.) that might drive
+    a change in the state machine
+*/
 package hsm
 
 import (
@@ -5,15 +53,17 @@ import (
 	"go.uber.org/zap"
 )
 
+// StateMachineEngine manages event processing as implemented by each State
 type StateMachineEngine struct {
 	logger             *zap.Logger
 	currentStateEngine *StateEngine
 }
 
-func NewStateMachineEngine(logger *zap.Logger, startStateEngine *StateEngine) *StateMachineEngine {
+// StateMachineEngine constructor
+func NewStateMachineEngine(logger *zap.Logger, startState State) *StateMachineEngine {
 	sme := &StateMachineEngine{
 		logger:             logger,
-		currentStateEngine: startStateEngine,
+		currentStateEngine: startState.StateEngine(),
 	}
 
 	// This will ensure we are in the proper state starting from the beginning.
@@ -22,7 +72,7 @@ func NewStateMachineEngine(logger *zap.Logger, startStateEngine *StateEngine) *S
 }
 
 func (sme *StateMachineEngine) initialize() {
-	sme.currentStateEngine = sme.currentStateEngine.GetState().OnEnter(StartEvent)
+	sme.currentStateEngine = sme.currentStateEngine.OnEnter(StartEvent)
 	sme.logger.Debug("state machine initialized",
 		zap.String("starting_state", sme.currentStateEngine.Name()),
 	)
@@ -30,26 +80,26 @@ func (sme *StateMachineEngine) initialize() {
 
 func (sme *StateMachineEngine) handleEvent(e Event) bool {
 	// Find an event handler (if none found then skip the event)
-	eventHandler := sme.currentStateEngine.GetState().GetEventHandler(e)
-	parentStateEngine := sme.currentStateEngine.GetParentStateEngine()
+	eventHandler := sme.currentStateEngine.EventHandler(e)
+	parentStateEngine := sme.currentStateEngine.ParentStateEngine()
 	for eventHandler == nil {
 		if parentStateEngine == nil {
 			// Skip event handling
 			return false
 		}
 
-		eventHandler = parentStateEngine.GetState().GetEventHandler(e)
-		parentStateEngine = parentStateEngine.GetParentStateEngine()
+		eventHandler = parentStateEngine.EventHandler(e)
+		parentStateEngine = parentStateEngine.ParentStateEngine()
 	}
 
 	// Handle the event and update the current state
-	sme.currentStateEngine = eventHandler.transition.execute(sme.currentStateEngine)
+	sme.currentStateEngine = eventHandler.transition.Execute(sme.currentStateEngine)
 
 	return true
 }
 
-// Run sets up the state machine engine, primes the state machine with its start event
-// and then continues to read from the supplied channel until its closed.
+// Run starts the StateMachineEngine and processes incoming events until the StateMachineEngine
+// terminates (new currentState is nil after processing a transition) or the "done" event is received
 func (sme *StateMachineEngine) Run(ctx context.Context, events <-chan Event) {
 	go func() {
 		for {

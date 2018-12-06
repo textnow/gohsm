@@ -39,38 +39,38 @@ func (s *StateA) OnEnter(event hsm.Event) *hsm.StateEngine {
 
 func (s *StateA) OnExit(event hsm.Event) *hsm.StateEngine {
 	fmt.Printf("<-A;")
-	return s.stateEngine.GetParentStateEngine()
+	return s.stateEngine.ParentStateEngine()
 }
 
-func (s *StateA) GetEventHandler(event hsm.Event) *hsm.EventHandler {
+func (s *StateA) EventHandler(event hsm.Event) *hsm.EventHandler {
 	switch event.ID() {
 	case ec.ID():
-		transition := hsm.NewExternalTransition(event, s.stateEngine, daveAction3)
+		transition := hsm.NewExternalTransition(event, s.stateEngine, action3)
 		return hsm.NewEventHandler(transition)
 	case eb.ID():
-		transition := hsm.NewInternalTransition(event, daveAction2)
+		transition := hsm.NewInternalTransition(event, action2)
 		return hsm.NewEventHandler(transition)
 	case ed.ID():
 		toState := NewStateD()
-		transition := hsm.NewExternalTransition(event, toState.GetStateEngine(), daveAction4)
+		transition := hsm.NewExternalTransition(event, toState.StateEngine(), action4)
 		return hsm.NewEventHandler(transition)
 	default:
 		return nil
 	}
 }
 
-func (s *StateA) GetStateEngine() *hsm.StateEngine {
+func (s *StateA) StateEngine() *hsm.StateEngine {
 	return s.stateEngine
 }
 
-func daveAction2() {
+func action2() {
 	fmt.Printf("\nAction2\n")
 }
 
-func daveAction3() {
+func action3() {
 	fmt.Printf("\nAction3\n")
 }
 
-func daveAction4() {
+func action4() {
 	fmt.Printf("\nAction4\n")
 }

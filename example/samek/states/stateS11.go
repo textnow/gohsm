@@ -19,8 +19,8 @@ func NewS11State(parentState *S1State) *S11State {
 	if parentState == nil {
 		state.stateEngine = hsm.NewStateEngine(state, nil)
 	} else {
-		state.stateEngine = hsm.NewStateEngine(state, parentState.GetStateEngine())
-		state.parentStateEngine = parentState.GetStateEngine()
+		state.stateEngine = hsm.NewStateEngine(state, parentState.StateEngine())
+		state.parentStateEngine = parentState.StateEngine()
 	}
 
 	return state
@@ -37,20 +37,20 @@ func (s *S11State) OnEnter(event hsm.Event) *hsm.StateEngine {
 
 func (s *S11State) OnExit(event hsm.Event) *hsm.StateEngine {
 	fmt.Printf("<-S11;")
-	return s.stateEngine.GetParentStateEngine()
+	return s.stateEngine.ParentStateEngine()
 }
 
-func (s *S11State) GetEventHandler(event hsm.Event) *hsm.EventHandler {
+func (s *S11State) EventHandler(event hsm.Event) *hsm.EventHandler {
 	switch event.ID() {
 	case eg.ID():
 		toState := NewS211State(nil)
-		transition := hsm.NewExternalTransition(event, toState.GetStateEngine(), hsm.NopAction)
+		transition := hsm.NewExternalTransition(event, toState.StateEngine(), hsm.NopAction)
 		return hsm.NewEventHandler(transition)
 	default:
 		return nil
 	}
 }
 
-func (s *S11State) GetStateEngine() *hsm.StateEngine {
+func (s *S11State) StateEngine() *hsm.StateEngine {
 	return s.stateEngine
 }

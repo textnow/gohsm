@@ -14,7 +14,7 @@ func NewStateC(parentState *StateA) *StateC {
 		stateEngine: nil,
 	}
 
-	state.stateEngine = hsm.NewStateEngine(state, parentState.GetStateEngine())
+	state.stateEngine = hsm.NewStateEngine(state, parentState.StateEngine())
 
 	return state
 }
@@ -34,30 +34,30 @@ func (s *StateC) OnEnter(event hsm.Event) *hsm.StateEngine {
 
 func (s *StateC) OnExit(event hsm.Event) *hsm.StateEngine {
 	fmt.Printf("<-C;")
-	return s.stateEngine.GetParentStateEngine()
+	return s.stateEngine.ParentStateEngine()
 }
 
-func (s *StateC) GetEventHandler(event hsm.Event) *hsm.EventHandler {
+func (s *StateC) EventHandler(event hsm.Event) *hsm.EventHandler {
 	switch event.ID() {
 	case ex.ID():
-		transition := hsm.NewExternalTransition(event, s.stateEngine, daveAction6)
+		transition := hsm.NewExternalTransition(event, s.stateEngine, action6)
 		return hsm.NewEventHandler(transition)
 	case ey.ID():
-		transition := hsm.NewInternalTransition(event, daveAction7)
+		transition := hsm.NewInternalTransition(event, action7)
 		return hsm.NewEventHandler(transition)
 	default:
 		return nil
 	}
 }
 
-func (s *StateC) GetStateEngine() *hsm.StateEngine {
+func (s *StateC) StateEngine() *hsm.StateEngine {
 	return s.stateEngine
 }
 
-func daveAction6() {
+func action6() {
 	fmt.Printf("\nAction6\n")
 }
 
-func daveAction7() {
+func action7() {
 	fmt.Printf("\nAction7\n")
 }

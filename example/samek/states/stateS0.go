@@ -33,20 +33,20 @@ func (s *S0State) OnEnter(event hsm.Event) *hsm.StateEngine {
 
 func (s *S0State) OnExit(event hsm.Event) *hsm.StateEngine {
 	fmt.Printf("<-S0;")
-	return s.stateEngine.GetParentStateEngine()
+	return s.stateEngine.ParentStateEngine()
 }
 
-func (s *S0State) GetEventHandler(event hsm.Event) *hsm.EventHandler {
+func (s *S0State) EventHandler(event hsm.Event) *hsm.EventHandler {
 	switch event.ID() {
 	case ee.ID():
 		toState := NewS211State(nil)
-		transition := hsm.NewExternalTransition(event, toState.GetStateEngine(), hsm.NopAction)
+		transition := hsm.NewExternalTransition(event, toState.StateEngine(), hsm.NopAction)
 		return hsm.NewEventHandler(transition)
 	default:
 		return nil
 	}
 }
 
-func (s *S0State) GetStateEngine() *hsm.StateEngine {
+func (s *S0State) StateEngine() *hsm.StateEngine {
 	return s.stateEngine
 }
