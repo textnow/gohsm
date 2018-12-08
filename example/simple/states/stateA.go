@@ -10,10 +10,10 @@ type StateA struct {
 	a           bool
 }
 
-func NewStateA() *StateA {
+func NewStateA(a bool) *StateA {
 	state := &StateA{
 		stateEngine: nil,
-		a:           true,
+		a:           a,
 	}
 
 	state.stateEngine = hsm.NewStateEngine(state, nil)
@@ -30,10 +30,10 @@ func (s *StateA) OnEnter(event hsm.Event) *hsm.StateEngine {
 
 	if s.a {
 		stateB := NewStateB(s)
-		return stateB.OnEnter(event)
+		return stateB.StateEngine().OnEnter(event)
 	} else {
 		stateC := NewStateC(s)
-		return stateC.OnEnter(event)
+		return stateC.StateEngine().OnEnter(event)
 	}
 }
 
@@ -45,7 +45,8 @@ func (s *StateA) OnExit(event hsm.Event) *hsm.StateEngine {
 func (s *StateA) EventHandler(event hsm.Event) *hsm.EventHandler {
 	switch event.ID() {
 	case ec.ID():
-		transition := hsm.NewExternalTransition(event, s.stateEngine, action3)
+		toState := NewStateA(s.a)
+		transition := hsm.NewExternalTransition(event, toState.StateEngine(), action3)
 		return hsm.NewEventHandler(transition)
 	case eb.ID():
 		transition := hsm.NewInternalTransition(event, action2)
@@ -65,12 +66,15 @@ func (s *StateA) StateEngine() *hsm.StateEngine {
 
 func action2() {
 	fmt.Printf("\nAction2\n")
+	LastActionIdExecuted = 2
 }
 
 func action3() {
 	fmt.Printf("\nAction3\n")
+	LastActionIdExecuted = 3
 }
 
 func action4() {
 	fmt.Printf("\nAction4\n")
+	LastActionIdExecuted = 4
 }

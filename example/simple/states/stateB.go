@@ -51,4 +51,5 @@ func (s *StateB) StateEngine() *hsm.StateEngine {
 
 func action1() {
 	fmt.Printf("\nAction1\n")
+	LastActionIdExecuted = 1
 }

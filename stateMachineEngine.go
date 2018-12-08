@@ -71,6 +71,11 @@ func NewStateMachineEngine(logger *zap.Logger, startState State) *StateMachineEn
 	return sme
 }
 
+// CurrentState returns the state machine's current state
+func (sme *StateMachineEngine) CurrentStateEngine() *StateEngine {
+	return sme.currentStateEngine
+}
+
 func (sme *StateMachineEngine) initialize() {
 	sme.currentStateEngine = sme.currentStateEngine.OnEnter(StartEvent)
 	sme.logger.Debug("state machine initialized",
@@ -78,7 +83,7 @@ func (sme *StateMachineEngine) initialize() {
 	)
 }
 
-func (sme *StateMachineEngine) handleEvent(e Event) bool {
+func (sme *StateMachineEngine) HandleEvent(e Event) bool {
 	// Find an event handler (if none found then skip the event)
 	eventHandler := sme.currentStateEngine.EventHandler(e)
 	parentStateEngine := sme.currentStateEngine.ParentStateEngine()
@@ -114,7 +119,7 @@ func (sme *StateMachineEngine) Run(ctx context.Context, events <-chan Event) {
 					zap.String("current_state", sme.currentStateEngine.Name()),
 				)
 
-				handled := sme.handleEvent(e)
+				handled := sme.HandleEvent(e)
 				if !handled {
 					sme.logger.Debug("event not handled",
 						zap.String("event_id", e.ID()),

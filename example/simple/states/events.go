@@ -25,3 +25,5 @@ var ed = &KeyPressEvent{"d"}
 var ee = &KeyPressEvent{"e"}
 var ey = &KeyPressEvent{"y"}
 var ex = &KeyPressEvent{"x"}
+
+var LastActionIdExecuted = 0

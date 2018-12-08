@@ -33,7 +33,7 @@ func handleInput(events chan hsm.Event) {
 func main() {
 	logger, _ := zap.NewDevelopment()
 
-	startState := states.NewStateA()
+	startState := states.NewStateA(true)
 	stateMachineEngine := hsm.NewStateMachineEngine(logger, startState)
 
 	events := make(chan hsm.Event)
