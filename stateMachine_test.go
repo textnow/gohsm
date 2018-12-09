@@ -5,10 +5,10 @@ import (
 	"testing"
 )
 
-func TestNewStateMachineEngine(t *testing.T) {
-	startState := NewMockState(nil)
-	stateMachineEngine := getStateMachine(t, startState)
-	assert.Equal(t, startState.StateEngine(), stateMachineEngine.currentStateEngine)
+func TestNewStateMachine(t *testing.T) {
+	startState := NewMockState(NilState)
+	stateMachine := getStateMachine(t, startState)
+	assert.Equal(t, startState, stateMachine.currentState)
 }
 
 type handleEventTest struct {
@@ -37,18 +37,18 @@ var handleEventTests = []handleEventTest{
 
 func TestHandleEvent(t *testing.T) {
 	for _, tt := range handleEventTests {
-		startState := NewMockState(nil)
-		stateMachineEngine := getStateMachine(t, startState)
+		startState := NewMockState(NilState)
+		stateMachine := getStateMachine(t, startState)
 
 		event := NewMockEvent(tt.eventId)
-		result := stateMachineEngine.HandleEvent(event)
+		result := stateMachine.HandleEvent(event)
 
 		assert.Equal(t, result, tt.result)
 		if tt.currentStateName != "" {
-			assert.NotNil(t, stateMachineEngine.currentStateEngine)
-			assert.Equal(t, stateMachineEngine.currentStateEngine.Name(), tt.currentStateName)
+			assert.False(t, IsNilState(stateMachine.currentState))
+			assert.Equal(t, stateMachine.currentState.Name(), tt.currentStateName)
 		} else {
-			assert.Nil(t, stateMachineEngine.currentStateEngine)
+			assert.True(t, IsNilState(stateMachine.currentState))
 		}
 	}
 }

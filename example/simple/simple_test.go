@@ -35,10 +35,10 @@ func TestMain(m *testing.M) {
 // simpleHSMTest is used for behavioural HSM testing using the simple HSM structure.
 type simpleHSMTest struct {
 	name string
-	sm   *hsm.StateMachineEngine
+	sm   *hsm.StateMachine
 
-	startStateEngine *hsm.StateEngine
-	endStateEngine   *hsm.StateEngine
+	startState hsm.State
+	endState   hsm.State
 
 	a bool
 }
@@ -52,13 +52,13 @@ func SimpleHSMContext(s *godog.Suite) {
 	// We use the same API across scenarios, this reduces isolation to catch
 	// long-chain errors (pointer issues, etc.)
 	s.BeforeSuite(func() {
-		test.startStateEngine = nil
-		test.endStateEngine = nil
+		test.startState = hsm.NilState
+		test.endState = hsm.NilState
 	})
 
 	s.BeforeScenario(func(s interface{}) {
-		test.startStateEngine = nil
-		test.endStateEngine = nil
+		test.startState = hsm.NilState
+		test.endState = hsm.NilState
 		test.a = false
 		states.LastActionIdExecuted = 0
 
@@ -91,59 +91,59 @@ func (t *simpleHSMTest) theSimpleHSMIsInitialized() error {
 	logger, _ := zap.NewDevelopment()
 	startState := states.NewStateA(t.a)
 
-	t.sm = hsm.NewStateMachineEngine(logger, startState)
-	t.startStateEngine = t.sm.CurrentStateEngine()
-	t.endStateEngine = t.sm.CurrentStateEngine()
+	t.sm = hsm.NewStateMachine(logger, startState)
+	t.startState = t.sm.CurrentState()
+	t.endState = t.sm.CurrentState()
 	return nil
 }
 
 func (t *simpleHSMTest) currentStateIs(state string) error {
-	if t.sm.CurrentStateEngine().Name() != state {
-		return fmt.Errorf("expected state %s, got state %s", state, t.sm.CurrentStateEngine().Name())
+	if t.sm.CurrentState().Name() != state {
+		return fmt.Errorf("expected state %s, got state %s", state, t.sm.CurrentState().Name())
 	}
 	return nil
 }
 
-func (t *simpleHSMTest) theStateIsEntered(state string) error {
+func (t *simpleHSMTest) theStateIsEntered(stateName string) error {
 	// Search the end state and all parent states for the desired state to check that it has been entered
-	for stateEngine := t.endStateEngine; stateEngine != nil; stateEngine = stateEngine.ParentStateEngine() {
-		if stateEngine.Entered() {
-			fmt.Printf("State %s entered = true\n", stateEngine.Name())
+	for state := t.endState; !hsm.IsNilState(state); state = state.ParentState() {
+		if state.Entered() {
+			fmt.Printf("State %s entered = true\n", state.Name())
 		} else {
-			fmt.Printf("State %s entered = false\n", stateEngine.Name())
+			fmt.Printf("State %s entered = false\n", state.Name())
 		}
 
-		if stateEngine.Name() == state {
-			if !stateEngine.Entered() {
+		if state.Name() == stateName {
+			if !state.Entered() {
 				return fmt.Errorf("expected state %s to be entered", state)
 			}
 			return nil
 		}
 	}
 
-	return fmt.Errorf("did not find state %s", state)
+	return fmt.Errorf("did not find state %s", stateName)
 }
 
-func (t *simpleHSMTest) theStateIsExited(state string) error {
+func (t *simpleHSMTest) theStateIsExited(stateName string) error {
 	// Search the start state and all parent states for the desired state to check that it has been exited
-	for stateEngine := t.startStateEngine; stateEngine != nil; stateEngine = stateEngine.ParentStateEngine() {
-		if stateEngine.Name() == state {
-			if !stateEngine.Exited() {
-				return fmt.Errorf("expected state %s to be exited", state)
+	for state := t.startState; !hsm.IsNilState(state); state = state.ParentState() {
+		if state.Name() == stateName {
+			if !state.Exited() {
+				return fmt.Errorf("expected state %s to be exited", stateName)
 			}
 			return nil
 		}
 	}
 
-	return fmt.Errorf("did not find state %s", state)
+	return fmt.Errorf("did not find state %s", stateName)
 }
 
-func (t *simpleHSMTest) theStateIsNotEntered(state string) error {
+func (t *simpleHSMTest) theStateIsNotEntered(stateName string) error {
 	// Search the end state and all parent states for the desired state to check that it has not been entered
-	for stateEngine := t.endStateEngine; stateEngine != nil; stateEngine = stateEngine.ParentStateEngine() {
-		if stateEngine.Name() == state {
-			if stateEngine.Entered() {
-				return fmt.Errorf("expected state %s to NOT be entered", state)
+	for state := t.endState; !hsm.IsNilState(state); state = state.ParentState() {
+		if state.Name() == stateName {
+			if state.Entered() {
+				return fmt.Errorf("expected state %s to NOT be entered", stateName)
 			}
 			return nil
 		}
@@ -152,12 +152,12 @@ func (t *simpleHSMTest) theStateIsNotEntered(state string) error {
 	return nil
 }
 
-func (t *simpleHSMTest) theStateIsNotExited(state string) error {
+func (t *simpleHSMTest) theStateIsNotExited(stateName string) error {
 	// Search the start state and all parent states for the desired state to check that it has not been exited
-	for stateEngine := t.startStateEngine; stateEngine != nil; stateEngine = stateEngine.ParentStateEngine() {
-		if stateEngine.Name() == state {
-			if stateEngine.Exited() {
-				return fmt.Errorf("expected state %s to NOT be exited", state)
+	for state := t.startState; !hsm.IsNilState(state); state = state.ParentState() {
+		if state.Name() == stateName {
+			if state.Exited() {
+				return fmt.Errorf("expected state %s to NOT be exited", stateName)
 			}
 			return nil
 		}
@@ -167,9 +167,9 @@ func (t *simpleHSMTest) theStateIsNotExited(state string) error {
 }
 
 func (t *simpleHSMTest) theEventIsGenerated(event string) error {
-	t.startStateEngine = t.sm.CurrentStateEngine()
+	t.startState = t.sm.CurrentState()
 	t.sm.HandleEvent(states.NewKeyPressEvent(event))
-	t.endStateEngine = t.sm.CurrentStateEngine()
+	t.endState = t.sm.CurrentState()
 
 	return nil
 }

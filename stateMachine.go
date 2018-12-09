@@ -7,12 +7,8 @@ Related Documents:
 
 Included in this framework are the following components:
 
-  - StateMachineEngine:
-    Engine that controls the state machine event processing
-
-  - StateEngine:
-    State implementation required by the StateMachineEngine to support event processing.  Operations that are
-    common across all states are located in the StateEngine
+  - StateMachine:
+    Machine that controls the event processing
 
   - State:
     Interface that must be implemented by all States in the StateMachine
@@ -37,11 +33,6 @@ Included in this framework are the following components:
           1. OnExit is called on the current state and all parent states until there are no more parent states
           2. action() associated with the the transition is called
 
-  - EventHandler:
-    Wrapper around a transition.  For each event, the StateMachineEngine searches for an EventHandler starting with
-    the current state and then proceeded with each parent state.  If found, then the transition contained in the
-    EventHandler is executed.  Otherwise the event is dropped.
-
   - Event:
     An event represents something that has happened (login, logout, newCall, networkChange, etc.) that might drive
     a change in the state machine
@@ -53,59 +44,61 @@ import (
 	"go.uber.org/zap"
 )
 
-// StateMachineEngine manages event processing as implemented by each State
-type StateMachineEngine struct {
-	logger             *zap.Logger
-	currentStateEngine *StateEngine
+// StateMachine manages event processing as implemented by each State
+type StateMachine struct {
+	logger       *zap.Logger
+	currentState State
 }
 
-// StateMachineEngine constructor
-func NewStateMachineEngine(logger *zap.Logger, startState State) *StateMachineEngine {
-	sme := &StateMachineEngine{
-		logger:             logger,
-		currentStateEngine: startState.StateEngine(),
+// StateMachine constructor
+func NewStateMachine(logger *zap.Logger, startState State) *StateMachine {
+	sm := &StateMachine{
+		logger:       logger,
+		currentState: startState,
 	}
 
 	// This will ensure we are in the proper state starting from the beginning.
-	sme.initialize()
-	return sme
+	sm.initialize()
+	return sm
 }
 
 // CurrentState returns the state machine's current state
-func (sme *StateMachineEngine) CurrentStateEngine() *StateEngine {
-	return sme.currentStateEngine
+func (sm *StateMachine) CurrentState() State {
+	return sm.currentState
 }
 
-func (sme *StateMachineEngine) initialize() {
-	sme.currentStateEngine = sme.currentStateEngine.OnEnter(StartEvent)
-	sme.logger.Debug("state machine initialized",
-		zap.String("starting_state", sme.currentStateEngine.Name()),
+func (sm *StateMachine) initialize() {
+	sm.currentState = sm.currentState.OnEnter(StartEvent)
+	sm.logger.Debug("state machine initialized",
+		zap.String("starting_state", sm.currentState.Name()),
 	)
 }
 
-func (sme *StateMachineEngine) HandleEvent(e Event) bool {
+// HandleEvent executes the event handler for the current state or parent state if found.
+// If no event handler is found then the event is dropped
+func (sm *StateMachine) HandleEvent(e Event) bool {
 	// Find an event handler (if none found then skip the event)
-	eventHandler := sme.currentStateEngine.EventHandler(e)
-	parentStateEngine := sme.currentStateEngine.ParentStateEngine()
-	for eventHandler == nil {
-		if parentStateEngine == nil {
+	transition := sm.currentState.EventHandler(e)
+	parentState := sm.currentState.ParentState()
+	for IsNilTransition(transition) {
+		if IsNilState(parentState) {
 			// Skip event handling
 			return false
 		}
 
-		eventHandler = parentStateEngine.EventHandler(e)
-		parentStateEngine = parentStateEngine.ParentStateEngine()
+		transition = parentState.EventHandler(e)
+		parentState = parentState.ParentState()
 	}
 
 	// Handle the event and update the current state
-	sme.currentStateEngine = eventHandler.transition.Execute(sme.currentStateEngine)
+	sm.currentState = transition.Execute(sm.currentState)
 
 	return true
 }
 
-// Run starts the StateMachineEngine and processes incoming events until the StateMachineEngine
+// Run starts the StateMachine and processes incoming events until the StateMachine
 // terminates (new currentState is nil after processing a transition) or the "done" event is received
-func (sme *StateMachineEngine) Run(ctx context.Context, events <-chan Event) {
+func (sm *StateMachine) Run(ctx context.Context, events <-chan Event) {
 	go func() {
 		for {
 			select {
@@ -114,29 +107,29 @@ func (sme *StateMachineEngine) Run(ctx context.Context, events <-chan Event) {
 					return
 				}
 
-				sme.logger.Debug("handling event",
+				sm.logger.Debug("handling event",
 					zap.String("event_id", e.ID()),
-					zap.String("current_state", sme.currentStateEngine.Name()),
+					zap.String("current_state", sm.currentState.Name()),
 				)
 
-				handled := sme.HandleEvent(e)
+				handled := sm.HandleEvent(e)
 				if !handled {
-					sme.logger.Debug("event not handled",
+					sm.logger.Debug("event not handled",
 						zap.String("event_id", e.ID()),
 					)
 					continue
 				}
 
-				if sme.currentStateEngine == nil {
-					sme.logger.Debug("current state nil, terminating run loop")
+				if sm.currentState == nil {
+					sm.logger.Debug("current state nil, terminating run loop")
 					return
 				}
 
-				sme.logger.Debug("handled event",
-					zap.String("current_state", sme.currentStateEngine.Name()),
+				sm.logger.Debug("handled event",
+					zap.String("current_state", sm.currentState.Name()),
 				)
 			case <-ctx.Done():
-				sme.logger.Debug("received done on context")
+				sm.logger.Debug("received done on context")
 				return
 			}
 		}

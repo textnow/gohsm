@@ -6,21 +6,16 @@ import (
 )
 
 type S21State struct {
-	stateEngine       *hsm.StateEngine
-	parentStateEngine *hsm.StateEngine
+	parentState *S2State
+	entered     bool
+	exited      bool
 }
 
 func NewS21State(parentState *S2State) *S21State {
-	state := &S21State{
-		stateEngine:       nil,
-		parentStateEngine: nil,
-	}
+	hsm.Precondition(parentState != nil, fmt.Sprintf("NewS21State: parentState cannot be nil"))
 
-	if parentState == nil {
-		state.stateEngine = hsm.NewStateEngine(state, nil)
-	} else {
-		state.stateEngine = hsm.NewStateEngine(state, parentState.StateEngine())
-		state.parentStateEngine = parentState.StateEngine()
+	state := &S21State{
+		parentState: parentState,
 	}
 
 	return state
@@ -30,33 +25,42 @@ func (s *S21State) Name() string {
 	return "S21"
 }
 
-func (s *S21State) OnEnter(event hsm.Event) *hsm.StateEngine {
+func (s *S21State) OnEnter(event hsm.Event) hsm.State {
+	hsm.Precondition(!s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
 	fmt.Printf("->S21;")
+	s.entered = true
 
 	stateS211 := NewS211State(s)
 
 	return stateS211.OnEnter(event)
 }
 
-func (s *S21State) OnExit(event hsm.Event) *hsm.StateEngine {
+func (s *S21State) OnExit(event hsm.Event) hsm.State {
+	hsm.Precondition(!s.exited, fmt.Sprintf("State %s has already been exited", s.Name()))
 	fmt.Printf("<-S21;")
-	return s.stateEngine.ParentStateEngine()
+	s.exited = true
+	return s.ParentState()
 }
 
-func (s *S21State) EventHandler(event hsm.Event) *hsm.EventHandler {
+func (s *S21State) EventHandler(event hsm.Event) hsm.Transition {
 	switch event.ID() {
 	case eb.ID():
-		toState := NewS211State(s)
-		transition := hsm.NewExternalTransition(event, toState.StateEngine(), hsm.NopAction)
-		return hsm.NewEventHandler(transition)
+		return hsm.NewExternalTransition(event, NewS211State(s), hsm.NopAction)
 	case eh.ID():
-		transition := hsm.NewExternalTransition(event, s.stateEngine, hsm.NopAction)
-		return hsm.NewEventHandler(transition)
+		return hsm.NewExternalTransition(event, NewS21State(s.parentState), hsm.NopAction)
 	default:
-		return nil
+		return hsm.NilTransition
 	}
 }
 
-func (s *S21State) StateEngine() *hsm.StateEngine {
-	return s.stateEngine
+func (s *S21State) ParentState() hsm.State {
+	return s.parentState
+}
+
+func (s *S21State) Entered() bool {
+	return s.entered
+}
+
+func (s *S21State) Exited() bool {
+	return s.exited
 }

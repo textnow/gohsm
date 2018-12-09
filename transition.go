@@ -1,5 +1,9 @@
 package hsm
 
+import (
+	"reflect"
+)
+
 // Action is a type representing a function to be executed on a transition.
 type Action func()
 
@@ -8,42 +12,45 @@ var NopAction = func() {}
 
 // Transition defines the interface that is implemented by the different types of transitions
 type Transition interface {
-	Execute(fromStateEngine *StateEngine) *StateEngine
+	Execute(fromState State) State
 }
 
 // ExternalTransition is a transition from one state to a different state
 type ExternalTransition struct {
-	event         Event
-	toStateEngine *StateEngine
-	action        Action
+	event   Event
+	toState State
+	action  Action
 }
 
 // ExternalTransition Constructor
-func NewExternalTransition(event Event, toStateEngine *StateEngine, action Action) *ExternalTransition {
+func NewExternalTransition(event Event, toState State, action Action) *ExternalTransition {
 	return &ExternalTransition{
-		event:         event,
-		toStateEngine: toStateEngine,
-		action:        action,
+		event:   event,
+		toState: toState,
+		action:  action,
 	}
 }
 
 // Execute calls OnExit() for the fromState and all parent states up to the nil parent state
 // or the parentState that is shared by the new toState.  Action() is then called and
 // OnEnter() is finally called on the new toState.
-func (t *ExternalTransition) Execute(fromStateEngine *StateEngine) *StateEngine {
-	// Call OnExit
-	parentStateEngine := fromStateEngine.OnExit(t.event)
-	for parentStateEngine != nil &&
-		(t.toStateEngine.ParentStateEngine() == nil ||
-			parentStateEngine.Name() != t.toStateEngine.ParentStateEngine().Name()) {
-		parentStateEngine = parentStateEngine.OnExit(t.event)
+func (t *ExternalTransition) Execute(fromState State) State {
+	// Call OnExit until one of the following is true:
+	//   - parentState is NilState
+	//   - parentState is equal to toState's parentState
+	parentState := fromState.OnExit(t.event)
+	for !IsNilState(parentState) {
+		if !IsNilState(t.toState.ParentState()) && parentState.Name() == t.toState.ParentState().Name() {
+			break
+		}
+		parentState = parentState.OnExit(t.event)
 	}
 
 	// Execute action on transition
 	t.action()
 
 	// Enter toState and return new currentState
-	return t.toStateEngine.OnEnter(t.event)
+	return t.toState.OnEnter(t.event)
 }
 
 // InternalTransition is a transition within a state where only the action() is performed.
@@ -62,10 +69,10 @@ func NewInternalTransition(event Event, action Action) *InternalTransition {
 }
 
 // Execute calls the transition's action and returns the same fromState that started the transition
-func (t *InternalTransition) Execute(fromStateEngine *StateEngine) *StateEngine {
+func (t *InternalTransition) Execute(fromState State) State {
 	t.action()
 
-	return fromStateEngine
+	return fromState
 }
 
 // EndTransition is the final transition that terminates the state machine
@@ -84,16 +91,30 @@ func NewEndTransition(event Event, action Action) *EndTransition {
 
 // Execute calls OnExit() for the fromState and all parent states up to the nil parent state
 // Action() is then called and nil is returned for the new current state
-func (t *EndTransition) Execute(fromStateEngine *StateEngine) *StateEngine {
+func (t *EndTransition) Execute(fromState State) State {
 	// Call OnExit
-	parentStateEngine := fromStateEngine.OnExit(t.event)
-	for parentStateEngine != nil {
-		parentStateEngine = parentStateEngine.OnExit(t.event)
+	parentState := fromState.OnExit(t.event)
+	for !IsNilState(parentState) {
+		parentState = parentState.OnExit(t.event)
 	}
 
 	// Execute action on transition
 	t.action()
 
 	// All done - turn out the lights
-	return nil
+	return NilState
+}
+
+// UndefinedTransition is used to define NilTransition
+type UndefinedTransition struct{}
+
+func (tr *UndefinedTransition) Execute(fromState State) State {
+	panic("'Execute called on NilTransition - not cool!")
+}
+
+var NilTransition = &UndefinedTransition{}
+
+// IsNilTransition returns true if the passed in transition is of type UndefinedTransition
+func IsNilTransition(transition Transition) bool {
+	return reflect.TypeOf(transition).String() == "*hsm.UndefinedTransition"
 }

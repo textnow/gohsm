@@ -6,62 +6,63 @@ import (
 )
 
 type StateA struct {
-	stateEngine *hsm.StateEngine
-	a           bool
+	a       bool
+	entered bool
+	exited  bool
 }
 
 func NewStateA(a bool) *StateA {
-	state := &StateA{
-		stateEngine: nil,
-		a:           a,
+	return &StateA{
+		a: a,
 	}
-
-	state.stateEngine = hsm.NewStateEngine(state, nil)
-
-	return state
 }
 
 func (s *StateA) Name() string {
 	return "A"
 }
 
-func (s *StateA) OnEnter(event hsm.Event) *hsm.StateEngine {
+func (s *StateA) OnEnter(event hsm.Event) hsm.State {
+	hsm.Precondition(!s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
 	fmt.Printf("->A;")
+	s.entered = true
 
 	if s.a {
-		stateB := NewStateB(s)
-		return stateB.StateEngine().OnEnter(event)
+		return NewStateB(s).OnEnter(event)
 	} else {
-		stateC := NewStateC(s)
-		return stateC.StateEngine().OnEnter(event)
+		return NewStateC(s).OnEnter(event)
 	}
 }
 
-func (s *StateA) OnExit(event hsm.Event) *hsm.StateEngine {
+func (s *StateA) OnExit(event hsm.Event) hsm.State {
+	hsm.Precondition(!s.exited, fmt.Sprintf("State %s has already been entered", s.Name()))
 	fmt.Printf("<-A;")
-	return s.stateEngine.ParentStateEngine()
+	s.exited = true
+	return s.ParentState()
 }
 
-func (s *StateA) EventHandler(event hsm.Event) *hsm.EventHandler {
+func (s *StateA) EventHandler(event hsm.Event) hsm.Transition {
 	switch event.ID() {
 	case ec.ID():
-		toState := NewStateA(s.a)
-		transition := hsm.NewExternalTransition(event, toState.StateEngine(), action3)
-		return hsm.NewEventHandler(transition)
+		return hsm.NewExternalTransition(event, NewStateA(s.a), action3)
 	case eb.ID():
-		transition := hsm.NewInternalTransition(event, action2)
-		return hsm.NewEventHandler(transition)
+		return hsm.NewInternalTransition(event, action2)
 	case ed.ID():
-		toState := NewStateD()
-		transition := hsm.NewExternalTransition(event, toState.StateEngine(), action4)
-		return hsm.NewEventHandler(transition)
+		return hsm.NewExternalTransition(event, NewStateD(), action4)
 	default:
-		return nil
+		return hsm.NilTransition
 	}
 }
 
-func (s *StateA) StateEngine() *hsm.StateEngine {
-	return s.stateEngine
+func (s *StateA) Entered() bool {
+	return s.entered
+}
+
+func (s *StateA) Exited() bool {
+	return s.exited
+}
+
+func (s *StateA) ParentState() hsm.State {
+	return hsm.NilState
 }
 
 func action2() {

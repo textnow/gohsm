@@ -6,17 +6,17 @@ import (
 )
 
 type S2State struct {
-	stateEngine *hsm.StateEngine
 	parentState *S0State
+	entered     bool
+	exited      bool
 }
 
 func NewS2State(parentState *S0State) *S2State {
+	hsm.Precondition(parentState != nil, fmt.Sprintf("NewS2State: parentState cannot be nil"))
+
 	state := &S2State{
-		stateEngine: nil,
 		parentState: parentState,
 	}
-
-	state.stateEngine = hsm.NewStateEngine(state, parentState.StateEngine())
 
 	return state
 }
@@ -25,34 +25,42 @@ func (s *S2State) Name() string {
 	return "S2"
 }
 
-func (s *S2State) OnEnter(event hsm.Event) *hsm.StateEngine {
+func (s *S2State) OnEnter(event hsm.Event) hsm.State {
+	hsm.Precondition(!s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
 	fmt.Printf("->S2;")
+	s.entered = true
 
 	stateS21 := NewS21State(s)
 
 	return stateS21.OnEnter(event)
 }
 
-func (s *S2State) OnExit(event hsm.Event) *hsm.StateEngine {
+func (s *S2State) OnExit(event hsm.Event) hsm.State {
+	hsm.Precondition(!s.exited, fmt.Sprintf("State %s has already been exited", s.Name()))
 	fmt.Printf("<-S2;")
-	return s.stateEngine.ParentStateEngine()
+	s.exited = true
+	return s.ParentState()
 }
 
-func (s *S2State) EventHandler(event hsm.Event) *hsm.EventHandler {
+func (s *S2State) EventHandler(event hsm.Event) hsm.Transition {
 	switch event.ID() {
 	case ec.ID():
-		toState := NewS1State(s.parentState)
-		transition := hsm.NewExternalTransition(event, toState.StateEngine(), hsm.NopAction)
-		return hsm.NewEventHandler(transition)
+		return hsm.NewExternalTransition(event, NewS1State(s.parentState), hsm.NopAction)
 	case ef.ID():
-		toState := NewS11State(nil)
-		transition := hsm.NewExternalTransition(event, toState.StateEngine(), hsm.NopAction)
-		return hsm.NewEventHandler(transition)
+		return hsm.NewExternalTransition(event, NewS1State(s.parentState), hsm.NopAction)
 	default:
-		return nil
+		return hsm.NilTransition
 	}
 }
 
-func (s *S2State) StateEngine() *hsm.StateEngine {
-	return s.stateEngine
+func (s *S2State) ParentState() hsm.State {
+	return s.parentState
+}
+
+func (s *S2State) Entered() bool {
+	return s.entered
+}
+
+func (s *S2State) Exited() bool {
+	return s.exited
 }

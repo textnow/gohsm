@@ -6,21 +6,16 @@ import (
 )
 
 type S11State struct {
-	stateEngine       *hsm.StateEngine
-	parentStateEngine *hsm.StateEngine
+	parentState *S1State
+	entered     bool
+	exited      bool
 }
 
 func NewS11State(parentState *S1State) *S11State {
-	state := &S11State{
-		stateEngine:       nil,
-		parentStateEngine: nil,
-	}
+	hsm.Precondition(parentState != nil, fmt.Sprintf("NewS11State: parentState cannot be nil"))
 
-	if parentState == nil {
-		state.stateEngine = hsm.NewStateEngine(state, nil)
-	} else {
-		state.stateEngine = hsm.NewStateEngine(state, parentState.StateEngine())
-		state.parentStateEngine = parentState.StateEngine()
+	state := &S11State{
+		parentState: parentState,
 	}
 
 	return state
@@ -30,27 +25,37 @@ func (s *S11State) Name() string {
 	return "S11"
 }
 
-func (s *S11State) OnEnter(event hsm.Event) *hsm.StateEngine {
+func (s *S11State) OnEnter(event hsm.Event) hsm.State {
+	hsm.Precondition(!s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
 	fmt.Printf("->S11;")
-	return s.stateEngine
+	s.entered = true
+	return s
 }
 
-func (s *S11State) OnExit(event hsm.Event) *hsm.StateEngine {
+func (s *S11State) OnExit(event hsm.Event) hsm.State {
+	hsm.Precondition(!s.exited, fmt.Sprintf("State %s has already been exited", s.Name()))
 	fmt.Printf("<-S11;")
-	return s.stateEngine.ParentStateEngine()
+	s.exited = true
+	return s.ParentState()
 }
 
-func (s *S11State) EventHandler(event hsm.Event) *hsm.EventHandler {
+func (s *S11State) EventHandler(event hsm.Event) hsm.Transition {
 	switch event.ID() {
 	case eg.ID():
-		toState := NewS211State(nil)
-		transition := hsm.NewExternalTransition(event, toState.StateEngine(), hsm.NopAction)
-		return hsm.NewEventHandler(transition)
+		return hsm.NewExternalTransition(event, NewS2State(s.parentState.parentState), hsm.NopAction)
 	default:
-		return nil
+		return hsm.NilTransition
 	}
 }
 
-func (s *S11State) StateEngine() *hsm.StateEngine {
-	return s.stateEngine
+func (s *S11State) ParentState() hsm.State {
+	return s.parentState
+}
+
+func (s *S11State) Entered() bool {
+	return s.entered
+}
+
+func (s *S11State) Exited() bool {
+	return s.exited
 }

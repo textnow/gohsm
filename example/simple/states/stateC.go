@@ -6,55 +6,58 @@ import (
 )
 
 type StateC struct {
-	stateEngine *hsm.StateEngine
 	parentState *StateA
+	entered     bool
+	exited      bool
 }
 
 func NewStateC(parentState *StateA) *StateC {
-	state := &StateC{
-		stateEngine: nil,
+	hsm.Precondition(parentState != nil, fmt.Sprintf("NewStateC: parentState cannot be nil"))
+
+	return &StateC{
 		parentState: parentState,
 	}
-
-	state.stateEngine = hsm.NewStateEngine(state, parentState.StateEngine())
-
-	return state
-}
-
-func (s *StateC) Initialize(state *hsm.StateEngine) {
-	s.stateEngine = state
 }
 
 func (s *StateC) Name() string {
 	return "C"
 }
 
-func (s *StateC) OnEnter(event hsm.Event) *hsm.StateEngine {
+func (s *StateC) OnEnter(event hsm.Event) hsm.State {
+	hsm.Precondition(!s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
 	fmt.Printf("->C;")
-	return s.stateEngine
+	s.entered = true
+	return s
 }
 
-func (s *StateC) OnExit(event hsm.Event) *hsm.StateEngine {
+func (s *StateC) OnExit(event hsm.Event) hsm.State {
+	hsm.Precondition(!s.exited, fmt.Sprintf("State %s has already been entered", s.Name()))
 	fmt.Printf("<-C;")
-	return s.stateEngine.ParentStateEngine()
+	s.exited = true
+	return s.ParentState()
 }
 
-func (s *StateC) EventHandler(event hsm.Event) *hsm.EventHandler {
+func (s *StateC) EventHandler(event hsm.Event) hsm.Transition {
 	switch event.ID() {
 	case ex.ID():
-		toState := NewStateC(s.parentState)
-		transition := hsm.NewExternalTransition(event, toState.StateEngine(), action6)
-		return hsm.NewEventHandler(transition)
+		return hsm.NewExternalTransition(event, NewStateC(s.parentState), action6)
 	case ey.ID():
-		transition := hsm.NewInternalTransition(event, action7)
-		return hsm.NewEventHandler(transition)
+		return hsm.NewInternalTransition(event, action7)
 	default:
-		return nil
+		return hsm.NilTransition
 	}
 }
 
-func (s *StateC) StateEngine() *hsm.StateEngine {
-	return s.stateEngine
+func (s *StateC) Entered() bool {
+	return s.entered
+}
+
+func (s *StateC) Exited() bool {
+	return s.exited
+}
+
+func (s *StateC) ParentState() hsm.State {
+	return s.parentState
 }
 
 func action6() {

@@ -6,19 +6,19 @@ import (
 )
 
 func TestNewExternalTransition(t *testing.T) {
-	mockState := NewMockState(nil)
+	mockState := NewMockState(NilState)
 	mockEvent := NewMockEvent(mockStartEventId)
 
-	transition := NewExternalTransition(mockEvent, mockState.StateEngine(), NopAction)
+	transition := NewExternalTransition(mockEvent, mockState, NopAction)
 	assert.NotNil(t, transition)
 }
 
 func TestExternalTransition_Execute(t *testing.T) {
-	mockState := NewMockState(nil)
+	mockState := NewMockState(NilState)
 	mockEvent := NewMockEvent(mockStartEventId)
 
-	transition := NewExternalTransition(mockEvent, mockState.StateEngine(), NopAction)
-	assert.Equal(t, mockState.StateEngine(), transition.Execute(mockState.StateEngine()))
+	transition := NewExternalTransition(mockEvent, mockState, NopAction)
+	assert.Equal(t, mockState, transition.Execute(mockState))
 }
 
 func TestNewInternalTransition(t *testing.T) {
@@ -29,11 +29,11 @@ func TestNewInternalTransition(t *testing.T) {
 }
 
 func TestInternalTransition_Execute(t *testing.T) {
-	mockState := NewMockState(nil)
+	mockState := NewMockState(NilState)
 	mockEvent := NewMockEvent(mockStartEventId)
 
 	transition := NewInternalTransition(mockEvent, NopAction)
-	assert.Equal(t, mockState.StateEngine(), transition.Execute(mockState.StateEngine()))
+	assert.Equal(t, mockState, transition.Execute(mockState))
 }
 
 func TestNewEndTransition(t *testing.T) {
@@ -44,9 +44,9 @@ func TestNewEndTransition(t *testing.T) {
 }
 
 func TestEndTransition_Execute(t *testing.T) {
-	mockState := NewMockState(nil)
+	mockState := NewMockState(NilState)
 	mockEvent := NewMockEvent(mockStartEventId)
 
 	transition := NewEndTransition(mockEvent, NopAction)
-	assert.Nil(t, transition.Execute(mockState.StateEngine()))
+	assert.Equal(t, NilState, transition.Execute(mockState))
 }

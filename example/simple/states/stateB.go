@@ -6,47 +6,55 @@ import (
 )
 
 type StateB struct {
-	stateEngine *hsm.StateEngine
 	parentState *StateA
+	entered     bool
+	exited      bool
 }
 
 func NewStateB(parentState *StateA) *StateB {
-	state := &StateB{
-		stateEngine: nil,
+	hsm.Precondition(parentState != nil, fmt.Sprintf("NewStateB: parentState cannot be nil"))
+
+	return &StateB{
 		parentState: parentState,
 	}
-
-	state.stateEngine = hsm.NewStateEngine(state, parentState.StateEngine())
-
-	return state
 }
 
 func (s *StateB) Name() string {
 	return "B"
 }
 
-func (s *StateB) OnEnter(event hsm.Event) *hsm.StateEngine {
+func (s *StateB) OnEnter(event hsm.Event) hsm.State {
+	hsm.Precondition(!s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
 	fmt.Printf("->B;")
-	return s.stateEngine
+	s.entered = true
+	return s
 }
 
-func (s *StateB) OnExit(event hsm.Event) *hsm.StateEngine {
+func (s *StateB) OnExit(event hsm.Event) hsm.State {
+	hsm.Precondition(!s.exited, fmt.Sprintf("State %s has already been entered", s.Name()))
 	fmt.Printf("<-B;")
-	return s.stateEngine.ParentStateEngine()
+	s.exited = true
+	return s.ParentState()
 }
 
-func (s *StateB) EventHandler(event hsm.Event) *hsm.EventHandler {
+func (s *StateB) EventHandler(event hsm.Event) hsm.Transition {
 	if event.ID() != ea.ID() {
-		return nil
+		return hsm.NilTransition
 	}
 
-	stateC := NewStateC(s.parentState)
-	transition := hsm.NewExternalTransition(event, stateC.StateEngine(), action1)
-	return hsm.NewEventHandler(transition)
+	return hsm.NewExternalTransition(event, NewStateC(s.parentState), action1)
 }
 
-func (s *StateB) StateEngine() *hsm.StateEngine {
-	return s.stateEngine
+func (s *StateB) Entered() bool {
+	return s.entered
+}
+
+func (s *StateB) Exited() bool {
+	return s.exited
+}
+
+func (s *StateB) ParentState() hsm.State {
+	return s.parentState
 }
 
 func action1() {
