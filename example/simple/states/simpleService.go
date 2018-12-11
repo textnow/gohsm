@@ -15,27 +15,31 @@ type SimpleService struct {
 }
 
 func ToSimpleService(ctx hsm.Service) *SimpleService {
-	sc := SimpleService{
+	ss := SimpleService{
 		Service: ctx,
 	}
-	return &sc
+	return &ss
 }
 
 func NewSimpleService(ctx hsm.Service, test string) *SimpleService {
-	sc := &SimpleService{
+	ss := &SimpleService{
 		Service: ctx,
 	}
 
 	// Initial save into map in the HSM context
-	sc.Set(TEST_STRING, test)
+	ss.Set(TEST_STRING, test)
 
-	return sc
+	return ss
 }
 
-func (sc *SimpleService) GetTest() string {
-	return sc.Service.Get(TEST_STRING).(string)
+func (ss *SimpleService) GetTest() string {
+	test := ss.Service.Get(TEST_STRING)
+	if test == nil {
+		return "";
+	}
+	return test.(string)
 }
 
-func (sc *SimpleService) SetTest(value string) {
-	sc.Set(TEST_STRING, value)
+func (ss *SimpleService) SetTest(value string) {
+	ss.Set(TEST_STRING, value)
 }

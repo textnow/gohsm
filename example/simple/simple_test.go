@@ -91,7 +91,7 @@ func (t *simpleHSMTest) theSimpleHSMIsInitialized() error {
 	logger, _ := zap.NewDevelopment()
 	startState := states.NewStateA(t.a)
 
-	t.sm = hsm.NewStateMachine(logger, startState)
+	t.sm = hsm.NewStateMachine(hsm.NewDefaultService(logger), startState)
 	t.startState = t.sm.CurrentState()
 	t.endState = t.sm.CurrentState()
 	return nil

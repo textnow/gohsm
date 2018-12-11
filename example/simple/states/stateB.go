@@ -24,10 +24,10 @@ func (s *StateB) Name() string {
 }
 
 func (s *StateB) OnEnter(srv hsm.Service, event hsm.Event) hsm.State {
-	sc := ToSimpleService(srv)
+	ss := ToSimpleService(srv)
 	hsm.Precondition(srv, !s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
-	sc.Logger().Debug("->B;")
-	sc.Logger().Debug(fmt.Sprintf("Got test value in state B: %s", sc.GetTest()))
+	ss.Logger().Debug("->B;")
+	ss.Logger().Debug(fmt.Sprintf("Got test value in state B: %s", ss.GetTest()))
 	s.entered = true
 	return s
 }

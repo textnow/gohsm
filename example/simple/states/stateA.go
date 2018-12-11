@@ -22,14 +22,14 @@ func (s *StateA) Name() string {
 }
 
 func (s *StateA) OnEnter(srv hsm.Service, event hsm.Event) hsm.State {
-	sc := ToSimpleService(srv)
+	ss := ToSimpleService(srv)
 
 	hsm.Precondition(srv, !s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
-	sc.Logger().Debug("->A;")
+	ss.Logger().Debug("->A;")
 	s.entered = true
 
-	sc.Logger().Debug(fmt.Sprintf("Got original test value: %s", sc.GetTest()))
-	sc.SetTest("This value was set in state A OnEnter()")
+	ss.Logger().Debug(fmt.Sprintf("Got original test value: %s", ss.GetTest()))
+	ss.SetTest("This value was set in state A OnEnter()")
 
 	if s.a {
 		return NewStateB(srv, s).OnEnter(srv, event)
