@@ -5,14 +5,14 @@ import (
 )
 
 // Action is a type representing a function to be executed on a transition.
-type Action func()
+type Action func(ctx Context)
 
 // NopAction is a no-op action
-var NopAction = func() {}
+var NopAction = func(ctx Context) {}
 
 // Transition defines the interface that is implemented by the different types of transitions
 type Transition interface {
-	Execute(fromState State) State
+	Execute(ctx Context, fromState State) State
 }
 
 // ExternalTransition is a transition from one state to a different state
@@ -34,23 +34,23 @@ func NewExternalTransition(event Event, toState State, action Action) *ExternalT
 // Execute calls OnExit() for the fromState and all parent states up to the nil parent state
 // or the parentState that is shared by the new toState.  Action() is then called and
 // OnEnter() is finally called on the new toState.
-func (t *ExternalTransition) Execute(fromState State) State {
+func (t *ExternalTransition) Execute(ctx Context, fromState State) State {
 	// Call OnExit until one of the following is true:
 	//   - parentState is NilState
 	//   - parentState is equal to toState's parentState
-	parentState := fromState.OnExit(t.event)
+	parentState := fromState.OnExit(ctx, t.event)
 	for !IsNilState(parentState) {
 		if !IsNilState(t.toState.ParentState()) && parentState.Name() == t.toState.ParentState().Name() {
 			break
 		}
-		parentState = parentState.OnExit(t.event)
+		parentState = parentState.OnExit(ctx, t.event)
 	}
 
 	// Execute action on transition
-	t.action()
+	t.action(ctx)
 
 	// Enter toState and return new currentState
-	return t.toState.OnEnter(t.event)
+	return t.toState.OnEnter(ctx, t.event)
 }
 
 // InternalTransition is a transition within a state where only the action() is performed.
@@ -69,8 +69,8 @@ func NewInternalTransition(event Event, action Action) *InternalTransition {
 }
 
 // Execute calls the transition's action and returns the same fromState that started the transition
-func (t *InternalTransition) Execute(fromState State) State {
-	t.action()
+func (t *InternalTransition) Execute(ctx Context, fromState State) State {
+	t.action(ctx)
 
 	return fromState
 }
@@ -91,15 +91,15 @@ func NewEndTransition(event Event, action Action) *EndTransition {
 
 // Execute calls OnExit() for the fromState and all parent states up to the nil parent state
 // Action() is then called and nil is returned for the new current state
-func (t *EndTransition) Execute(fromState State) State {
+func (t *EndTransition) Execute(ctx Context, fromState State) State {
 	// Call OnExit
-	parentState := fromState.OnExit(t.event)
+	parentState := fromState.OnExit(ctx, t.event)
 	for !IsNilState(parentState) {
-		parentState = parentState.OnExit(t.event)
+		parentState = parentState.OnExit(ctx, t.event)
 	}
 
 	// Execute action on transition
-	t.action()
+	t.action(ctx)
 
 	// All done - turn out the lights
 	return NilState
@@ -108,7 +108,7 @@ func (t *EndTransition) Execute(fromState State) State {
 // UndefinedTransition is used to define NilTransition
 type UndefinedTransition struct{}
 
-func (tr *UndefinedTransition) Execute(fromState State) State {
+func (tr *UndefinedTransition) Execute(ctx Context, fromState State) State {
 	panic("'Execute called on NilTransition - not cool!")
 }
 

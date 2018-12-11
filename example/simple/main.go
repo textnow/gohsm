@@ -34,7 +34,7 @@ func main() {
 	logger, _ := zap.NewDevelopment()
 
 	startState := states.NewStateA(true)
-	stateMachineEngine := hsm.NewStateMachine(logger, startState)
+	stateMachineEngine := hsm.NewStateMachine(hsm.NewDefaultContext(logger), startState)
 
 	events := make(chan hsm.Event)
 	stateMachineEngine.Run(context.TODO(), events)

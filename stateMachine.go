@@ -46,15 +46,15 @@ import (
 
 // StateMachine manages event processing as implemented by each State
 type StateMachine struct {
-	logger       *zap.Logger
 	currentState State
+	context		 Context
 }
 
 // StateMachine constructor
-func NewStateMachine(logger *zap.Logger, startState State) *StateMachine {
+func NewStateMachine(context Context, startState State) *StateMachine {
 	sm := &StateMachine{
-		logger:       logger,
 		currentState: startState,
+		context: context,
 	}
 
 	// This will ensure we are in the proper state starting from the beginning.
@@ -68,8 +68,8 @@ func (sm *StateMachine) CurrentState() State {
 }
 
 func (sm *StateMachine) initialize() {
-	sm.currentState = sm.currentState.OnEnter(StartEvent)
-	sm.logger.Debug("state machine initialized",
+	sm.currentState = sm.currentState.OnEnter(sm.context, StartEvent)
+	sm.context.Logger().Debug("state machine initialized",
 		zap.String("starting_state", sm.currentState.Name()),
 	)
 }
@@ -78,7 +78,7 @@ func (sm *StateMachine) initialize() {
 // If no event handler is found then the event is dropped
 func (sm *StateMachine) HandleEvent(e Event) bool {
 	// Find an event handler (if none found then skip the event)
-	transition := sm.currentState.EventHandler(e)
+	transition := sm.currentState.EventHandler(sm.context, e)
 	parentState := sm.currentState.ParentState()
 	for IsNilTransition(transition) {
 		if IsNilState(parentState) {
@@ -86,12 +86,12 @@ func (sm *StateMachine) HandleEvent(e Event) bool {
 			return false
 		}
 
-		transition = parentState.EventHandler(e)
+		transition = parentState.EventHandler(sm.context, e)
 		parentState = parentState.ParentState()
 	}
 
 	// Handle the event and update the current state
-	sm.currentState = transition.Execute(sm.currentState)
+	sm.currentState = transition.Execute(sm.context, sm.currentState)
 
 	return true
 }
@@ -107,29 +107,29 @@ func (sm *StateMachine) Run(ctx context.Context, events <-chan Event) {
 					return
 				}
 
-				sm.logger.Debug("handling event",
+				sm.context.Logger().Debug("handling event",
 					zap.String("event_id", e.ID()),
 					zap.String("current_state", sm.currentState.Name()),
 				)
 
 				handled := sm.HandleEvent(e)
 				if !handled {
-					sm.logger.Debug("event not handled",
+					sm.context.Logger().Debug("event not handled",
 						zap.String("event_id", e.ID()),
 					)
 					continue
 				}
 
 				if sm.currentState == nil {
-					sm.logger.Debug("current state nil, terminating run loop")
+					sm.context.Logger().Debug("current state nil, terminating run loop")
 					return
 				}
 
-				sm.logger.Debug("handled event",
+				sm.context.Logger().Debug("handled event",
 					zap.String("current_state", sm.currentState.Name()),
 				)
 			case <-ctx.Done():
-				sm.logger.Debug("received done on context")
+				sm.context.Logger().Debug("received done on context")
 				return
 			}
 		}

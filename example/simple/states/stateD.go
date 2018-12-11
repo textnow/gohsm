@@ -18,21 +18,21 @@ func (s *StateD) Name() string {
 	return "D"
 }
 
-func (s *StateD) OnEnter(event hsm.Event) hsm.State {
+func (s *StateD) OnEnter(ctx hsm.Context, event hsm.Event) hsm.State {
 	hsm.Precondition(!s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
-	fmt.Printf("->D;")
+	ctx.Logger().Debug("->D;")
 	s.entered = true
 	return s
 }
 
-func (s *StateD) OnExit(event hsm.Event) hsm.State {
+func (s *StateD) OnExit(ctx hsm.Context, event hsm.Event) hsm.State {
 	hsm.Precondition(!s.exited, fmt.Sprintf("State %s has already been entered", s.Name()))
-	fmt.Printf("<-D;")
+	ctx.Logger().Debug("<-D;")
 	s.exited = true
 	return s.ParentState()
 }
 
-func (s *StateD) EventHandler(event hsm.Event) hsm.Transition {
+func (s *StateD) EventHandler(ctx hsm.Context, event hsm.Event) hsm.Transition {
 	switch event.ID() {
 	case ee.ID():
 		return hsm.NewEndTransition(event, action5)
@@ -53,7 +53,7 @@ func (s *StateD) ParentState() hsm.State {
 	return hsm.NilState
 }
 
-func action5() {
-	fmt.Printf("\nAction5\n")
+func action5(ctx hsm.Context) {
+	ctx.Logger().Debug("Action5")
 	LastActionIdExecuted = 5
 }

@@ -23,21 +23,21 @@ func (s *StateC) Name() string {
 	return "C"
 }
 
-func (s *StateC) OnEnter(event hsm.Event) hsm.State {
+func (s *StateC) OnEnter(ctx hsm.Context, event hsm.Event) hsm.State {
 	hsm.Precondition(!s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
-	fmt.Printf("->C;")
+	ctx.Logger().Debug("->C;")
 	s.entered = true
 	return s
 }
 
-func (s *StateC) OnExit(event hsm.Event) hsm.State {
+func (s *StateC) OnExit(ctx hsm.Context, event hsm.Event) hsm.State {
 	hsm.Precondition(!s.exited, fmt.Sprintf("State %s has already been entered", s.Name()))
-	fmt.Printf("<-C;")
+	ctx.Logger().Debug("<-C;")
 	s.exited = true
 	return s.ParentState()
 }
 
-func (s *StateC) EventHandler(event hsm.Event) hsm.Transition {
+func (s *StateC) EventHandler(ctx hsm.Context, event hsm.Event) hsm.Transition {
 	switch event.ID() {
 	case ex.ID():
 		return hsm.NewExternalTransition(event, NewStateC(s.parentState), action6)
@@ -60,12 +60,12 @@ func (s *StateC) ParentState() hsm.State {
 	return s.parentState
 }
 
-func action6() {
-	fmt.Printf("\nAction6\n")
+func action6(ctx hsm.Context) {
+	ctx.Logger().Debug("Action6")
 	LastActionIdExecuted = 6
 }
 
-func action7() {
-	fmt.Printf("\nAction7\n")
+func action7(ctx hsm.Context) {
+	ctx.Logger().Debug("Action7")
 	LastActionIdExecuted = 7
 }
