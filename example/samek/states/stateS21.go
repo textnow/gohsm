@@ -11,8 +11,8 @@ type S21State struct {
 	exited      bool
 }
 
-func NewS21State(parentState *S2State) *S21State {
-	hsm.Precondition(parentState != nil, fmt.Sprintf("NewS21State: parentState cannot be nil"))
+func NewS21State(srv hsm.Service, parentState *S2State) *S21State {
+	hsm.Precondition(srv, parentState != nil, fmt.Sprintf("NewS21State: parentState cannot be nil"))
 
 	state := &S21State{
 		parentState: parentState,
@@ -25,29 +25,29 @@ func (s *S21State) Name() string {
 	return "S21"
 }
 
-func (s *S21State) OnEnter(event hsm.Event) hsm.State {
-	hsm.Precondition(!s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
-	fmt.Printf("->S21;")
+func (s *S21State) OnEnter(srv hsm.Service, event hsm.Event) hsm.State {
+	hsm.Precondition(srv, !s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
+	srv.Logger().Debug("->S21;")
 	s.entered = true
 
-	stateS211 := NewS211State(s)
+	stateS211 := NewS211State(srv, s)
 
-	return stateS211.OnEnter(event)
+	return stateS211.OnEnter(srv, event)
 }
 
-func (s *S21State) OnExit(event hsm.Event) hsm.State {
-	hsm.Precondition(!s.exited, fmt.Sprintf("State %s has already been exited", s.Name()))
-	fmt.Printf("<-S21;")
+func (s *S21State) OnExit(srv hsm.Service, event hsm.Event) hsm.State {
+	hsm.Precondition(srv, !s.exited, fmt.Sprintf("State %s has already been exited", s.Name()))
+	srv.Logger().Debug("<-S21;")
 	s.exited = true
 	return s.ParentState()
 }
 
-func (s *S21State) EventHandler(event hsm.Event) hsm.Transition {
+func (s *S21State) EventHandler(srv hsm.Service, event hsm.Event) hsm.Transition {
 	switch event.ID() {
 	case eb.ID():
-		return hsm.NewExternalTransition(event, NewS211State(s), hsm.NopAction)
+		return hsm.NewExternalTransition(event, NewS211State(srv, s), hsm.NopAction)
 	case eh.ID():
-		return hsm.NewExternalTransition(event, NewS21State(s.parentState), hsm.NopAction)
+		return hsm.NewExternalTransition(event, NewS21State(srv, s.parentState), hsm.NopAction)
 	default:
 		return hsm.NilTransition
 	}

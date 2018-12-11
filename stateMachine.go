@@ -47,11 +47,11 @@ import (
 // StateMachine manages event processing as implemented by each State
 type StateMachine struct {
 	currentState State
-	context		 Context
+	context      Service
 }
 
 // StateMachine constructor
-func NewStateMachine(context Context, startState State) *StateMachine {
+func NewStateMachine(context Service, startState State) *StateMachine {
 	sm := &StateMachine{
 		currentState: startState,
 		context: context,

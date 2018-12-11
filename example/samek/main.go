@@ -33,11 +33,11 @@ func main() {
 	logger, _ := zap.NewDevelopment()
 
 	startState := states.NewS0State()
-	stateMachineEngine := hsm.NewStateMachine(logger, startState)
+	stateMachineEngine := hsm.NewStateMachine(hsm.NewDefaultService(logger), startState)
 
 	events := make(chan hsm.Event)
 	stateMachineEngine.Run(context.TODO(), events)
 
 	handleInput(events)
-	fmt.Printf("Done\n")
+	logger.Debug("Done\n")
 }

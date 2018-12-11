@@ -7,9 +7,9 @@ import (
 // State interface that must be implemented by all states in a StateMachine
 type State interface {
 	Name() string
-	OnEnter(c Context, e Event) State
-	OnExit(c Context, e Event) State
-	EventHandler(c Context, e Event) Transition
+	OnEnter(c Service, e Event) State
+	OnExit(c Service, e Event) State
+	EventHandler(c Service, e Event) Transition
 	ParentState() State
 	Entered() bool
 	Exited() bool
@@ -22,15 +22,15 @@ func (p *UndefinedState) Name() string {
 	return "NilState"
 }
 
-func (p *UndefinedState) OnEnter(c Context, e Event) State {
+func (p *UndefinedState) OnEnter(c Service, e Event) State {
 	panic("OnEnter called on NilState - not cool!")
 }
 
-func (p *UndefinedState) OnExit(c Context, e Event) State {
+func (p *UndefinedState) OnExit(c Service, e Event) State {
 	panic("OnExit called on NilState - not cool!")
 }
 
-func (p *UndefinedState) EventHandler(c Context, e Event) Transition {
+func (p *UndefinedState) EventHandler(c Service, e Event) Transition {
 	panic("EventHandler called on NilState - not cool!")
 }
 

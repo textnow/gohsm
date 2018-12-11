@@ -25,17 +25,17 @@ func (s *MockState) Name() string {
 	return mockStateName
 }
 
-func (s *MockState) OnEnter(ctx Context, event Event) State {
+func (s *MockState) OnEnter(srv Service, event Event) State {
 	s.entered = true
 	return s
 }
 
-func (s *MockState) OnExit(ctx Context, event Event) State {
+func (s *MockState) OnExit(srv Service, event Event) State {
 	s.exited = true
 	return s.ParentState()
 }
 
-func (s *MockState) EventHandler(ctx Context, event Event) Transition {
+func (s *MockState) EventHandler(srv Service, event Event) Transition {
 	switch event.ID() {
 	case "start":
 		return NewInternalTransition(event, NopAction)
@@ -60,7 +60,7 @@ func (s *MockState) Exited() bool {
 
 func getStateMachine(t *testing.T, startState State) *StateMachine {
 	logger := zaptest.NewLogger(t)
-	stateMachine := NewStateMachine(NewDefaultContext(logger), startState)
+	stateMachine := NewStateMachine(NewDefaultService(logger), startState)
 
 	return stateMachine
 }

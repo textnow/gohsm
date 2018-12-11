@@ -18,21 +18,21 @@ func (s *StateD) Name() string {
 	return "D"
 }
 
-func (s *StateD) OnEnter(ctx hsm.Context, event hsm.Event) hsm.State {
-	hsm.Precondition(!s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
-	ctx.Logger().Debug("->D;")
+func (s *StateD) OnEnter(srv hsm.Service, event hsm.Event) hsm.State {
+	hsm.Precondition(srv, !s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
+	srv.Logger().Debug("->D;")
 	s.entered = true
 	return s
 }
 
-func (s *StateD) OnExit(ctx hsm.Context, event hsm.Event) hsm.State {
-	hsm.Precondition(!s.exited, fmt.Sprintf("State %s has already been entered", s.Name()))
+func (s *StateD) OnExit(ctx hsm.Service, event hsm.Event) hsm.State {
+	hsm.Precondition(ctx, !s.exited, fmt.Sprintf("State %s has already been entered", s.Name()))
 	ctx.Logger().Debug("<-D;")
 	s.exited = true
 	return s.ParentState()
 }
 
-func (s *StateD) EventHandler(ctx hsm.Context, event hsm.Event) hsm.Transition {
+func (s *StateD) EventHandler(ctx hsm.Service, event hsm.Event) hsm.Transition {
 	switch event.ID() {
 	case ee.ID():
 		return hsm.NewEndTransition(event, action5)
@@ -53,7 +53,7 @@ func (s *StateD) ParentState() hsm.State {
 	return hsm.NilState
 }
 
-func action5(ctx hsm.Context) {
-	ctx.Logger().Debug("Action5")
+func action5(srv hsm.Service) {
+	srv.Logger().Debug("Action5")
 	LastActionIdExecuted = 5
 }

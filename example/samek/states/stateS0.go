@@ -18,27 +18,27 @@ func (s *S0State) Name() string {
 	return "S0"
 }
 
-func (s *S0State) OnEnter(event hsm.Event) hsm.State {
-	hsm.Precondition(!s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
-	fmt.Printf("->S0;")
+func (s *S0State) OnEnter(srv hsm.Service, event hsm.Event) hsm.State {
+	hsm.Precondition(srv, !s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
+	srv.Logger().Debug("->S0;")
 	s.entered = true
 
-	stateS1 := NewS1State(s)
+	stateS1 := NewS1State(srv, s)
 
-	return stateS1.OnEnter(event)
+	return stateS1.OnEnter(srv, event)
 }
 
-func (s *S0State) OnExit(event hsm.Event) hsm.State {
-	hsm.Precondition(!s.exited, fmt.Sprintf("State %s has already been exited", s.Name()))
-	fmt.Printf("<-S0;")
+func (s *S0State) OnExit(srv hsm.Service, event hsm.Event) hsm.State {
+	hsm.Precondition(srv, !s.exited, fmt.Sprintf("State %s has already been exited", s.Name()))
+	srv.Logger().Debug("<-S0;")
 	s.exited = true
 	return s.ParentState()
 }
 
-func (s *S0State) EventHandler(event hsm.Event) hsm.Transition {
+func (s *S0State) EventHandler(srv hsm.Service, event hsm.Event) hsm.Transition {
 	switch event.ID() {
 	case ee.ID():
-		return hsm.NewExternalTransition(event, NewS2State(s), hsm.NopAction)
+		return hsm.NewExternalTransition(event, NewS2State(srv, s), hsm.NopAction)
 	default:
 		return hsm.NilTransition
 	}

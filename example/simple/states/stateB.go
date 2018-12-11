@@ -11,8 +11,8 @@ type StateB struct {
 	exited      bool
 }
 
-func NewStateB(parentState *StateA) *StateB {
-	hsm.Precondition(parentState != nil, fmt.Sprintf("NewStateB: parentState cannot be nil"))
+func NewStateB(srv hsm.Service, parentState *StateA) *StateB {
+	hsm.Precondition(srv, parentState != nil, fmt.Sprintf("NewStateB: parentState cannot be nil"))
 
 	return &StateB{
 		parentState: parentState,
@@ -23,26 +23,28 @@ func (s *StateB) Name() string {
 	return "B"
 }
 
-func (s *StateB) OnEnter(ctx hsm.Context, event hsm.Event) hsm.State {
-	hsm.Precondition(!s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
-	ctx.Logger().Debug("->B;")
+func (s *StateB) OnEnter(srv hsm.Service, event hsm.Event) hsm.State {
+	sc := ToSimpleService(srv)
+	hsm.Precondition(srv, !s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
+	sc.Logger().Debug("->B;")
+	sc.Logger().Debug(fmt.Sprintf("Got test value in state B: %s", sc.GetTest()))
 	s.entered = true
 	return s
 }
 
-func (s *StateB) OnExit(ctx hsm.Context, event hsm.Event) hsm.State {
-	hsm.Precondition(!s.exited, fmt.Sprintf("State %s has already been entered", s.Name()))
-	ctx.Logger().Debug("<-B;")
+func (s *StateB) OnExit(srv hsm.Service, event hsm.Event) hsm.State {
+	hsm.Precondition(srv, !s.exited, fmt.Sprintf("State %s has already been entered", s.Name()))
+	srv.Logger().Debug("<-B;")
 	s.exited = true
 	return s.ParentState()
 }
 
-func (s *StateB) EventHandler(c hsm.Context, event hsm.Event) hsm.Transition {
+func (s *StateB) EventHandler(srv hsm.Service, event hsm.Event) hsm.Transition {
 	if event.ID() != ea.ID() {
 		return hsm.NilTransition
 	}
 
-	return hsm.NewExternalTransition(event, NewStateC(s.parentState), action1)
+	return hsm.NewExternalTransition(event, NewStateC(srv, s.parentState), action1)
 }
 
 func (s *StateB) Entered() bool {
@@ -57,7 +59,7 @@ func (s *StateB) ParentState() hsm.State {
 	return s.parentState
 }
 
-func action1(ctx hsm.Context) {
-	ctx.Logger().Debug("Action1")
+func action1(srv hsm.Service) {
+	srv.Logger().Debug("Action1")
 	LastActionIdExecuted = 1
 }

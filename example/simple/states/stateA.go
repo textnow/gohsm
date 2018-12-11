@@ -21,26 +21,31 @@ func (s *StateA) Name() string {
 	return "A"
 }
 
-func (s *StateA) OnEnter(ctx hsm.Context, event hsm.Event) hsm.State {
-	hsm.Precondition(!s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
-	ctx.Logger().Debug("->A;")
+func (s *StateA) OnEnter(srv hsm.Service, event hsm.Event) hsm.State {
+	sc := ToSimpleService(srv)
+
+	hsm.Precondition(srv, !s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
+	sc.Logger().Debug("->A;")
 	s.entered = true
 
+	sc.Logger().Debug(fmt.Sprintf("Got original test value: %s", sc.GetTest()))
+	sc.SetTest("This value was set in state A OnEnter()")
+
 	if s.a {
-		return NewStateB(s).OnEnter(ctx, event)
+		return NewStateB(srv, s).OnEnter(srv, event)
 	} else {
-		return NewStateC(s).OnEnter(ctx, event)
+		return NewStateC(srv, s).OnEnter(srv, event)
 	}
 }
 
-func (s *StateA) OnExit(ctx hsm.Context, event hsm.Event) hsm.State {
-	hsm.Precondition(!s.exited, fmt.Sprintf("State %s has already been entered", s.Name()))
-	ctx.Logger().Debug("<-A;")
+func (s *StateA) OnExit(srv hsm.Service, event hsm.Event) hsm.State {
+	hsm.Precondition(srv, !s.exited, fmt.Sprintf("State %s has already been entered", s.Name()))
+	srv.Logger().Debug("<-A;")
 	s.exited = true
 	return s.ParentState()
 }
 
-func (s *StateA) EventHandler(ctx hsm.Context, event hsm.Event) hsm.Transition {
+func (s *StateA) EventHandler(srv hsm.Service, event hsm.Event) hsm.Transition {
 	switch event.ID() {
 	case ec.ID():
 		return hsm.NewExternalTransition(event, NewStateA(s.a), action3)
@@ -65,17 +70,17 @@ func (s *StateA) ParentState() hsm.State {
 	return hsm.NilState
 }
 
-func action2(ctx hsm.Context) {
-	ctx.Logger().Debug("Action2")
+func action2(srv hsm.Service) {
+	srv.Logger().Debug("Action2")
 	LastActionIdExecuted = 2
 }
 
-func action3(ctx hsm.Context) {
-	ctx.Logger().Debug("Action3")
+func action3(srv hsm.Service) {
+	srv.Logger().Debug("Action3")
 	LastActionIdExecuted = 3
 }
 
-func action4(ctx hsm.Context) {
-	ctx.Logger().Debug("Action4")
+func action4(srv hsm.Service) {
+	srv.Logger().Debug("Action4")
 	LastActionIdExecuted = 4
 }
