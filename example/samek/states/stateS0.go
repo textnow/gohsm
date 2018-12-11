@@ -6,12 +6,15 @@ import (
 )
 
 type S0State struct {
+	srv 	hsm.Service
 	entered bool
 	exited  bool
 }
 
-func NewS0State() *S0State {
-	return &S0State{}
+func NewS0State(srv hsm.Service) *S0State {
+	return &S0State{
+		srv: srv,
+	}
 }
 
 func (s *S0State) Name() string {
@@ -19,18 +22,18 @@ func (s *S0State) Name() string {
 }
 
 func (s *S0State) OnEnter(event hsm.Event) hsm.State {
-	hsm.Precondition(!s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
-	fmt.Printf("->S0;")
+	hsm.Precondition(s.srv, !s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
+	s.srv.Logger().Debug("->S0;")
 	s.entered = true
 
-	stateS1 := NewS1State(s)
+	stateS1 := NewS1State(s.srv, s)
 
 	return stateS1.OnEnter(event)
 }
 
 func (s *S0State) OnExit(event hsm.Event) hsm.State {
-	hsm.Precondition(!s.exited, fmt.Sprintf("State %s has already been exited", s.Name()))
-	fmt.Printf("<-S0;")
+	hsm.Precondition(s.srv, !s.exited, fmt.Sprintf("State %s has already been exited", s.Name()))
+	s.srv.Logger().Debug("<-S0;")
 	s.exited = true
 	return s.ParentState()
 }
@@ -38,7 +41,7 @@ func (s *S0State) OnExit(event hsm.Event) hsm.State {
 func (s *S0State) EventHandler(event hsm.Event) hsm.Transition {
 	switch event.ID() {
 	case ee.ID():
-		return hsm.NewExternalTransition(event, NewS2State(s), hsm.NopAction)
+		return hsm.NewExternalTransition(event, NewS2State(s.srv, s), hsm.NopAction)
 	default:
 		return hsm.NilTransition
 	}

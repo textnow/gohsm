@@ -31,13 +31,14 @@ func handleInput(events chan hsm.Event) {
 
 func main() {
 	logger, _ := zap.NewDevelopment()
+	srv := hsm.NewDefaultService(logger)
 
-	startState := states.NewS0State()
-	stateMachineEngine := hsm.NewStateMachine(logger, startState)
+	startState := states.NewS0State(srv)
+	stateMachineEngine := hsm.NewStateMachine(srv, startState)
 
 	events := make(chan hsm.Event)
 	stateMachineEngine.Run(context.TODO(), events)
 
 	handleInput(events)
-	fmt.Printf("Done\n")
+	logger.Debug("Done\n")
 }

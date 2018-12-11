@@ -2,8 +2,14 @@ package hsm
 
 import (
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 	"testing"
 )
+
+func NewMockService() (Service) {
+	logger, _ := zap.NewDevelopment()
+	return NewDefaultService(logger)
+}
 
 func TestNewExternalTransition(t *testing.T) {
 	mockState := NewMockState(NilState)
@@ -16,9 +22,10 @@ func TestNewExternalTransition(t *testing.T) {
 func TestExternalTransition_Execute(t *testing.T) {
 	mockState := NewMockState(NilState)
 	mockEvent := NewMockEvent(mockStartEventId)
+	mockService := NewMockService()
 
 	transition := NewExternalTransition(mockEvent, mockState, NopAction)
-	assert.Equal(t, mockState, transition.Execute(mockState))
+	assert.Equal(t, mockState, transition.Execute(mockService, mockState))
 }
 
 func TestNewInternalTransition(t *testing.T) {
@@ -31,9 +38,10 @@ func TestNewInternalTransition(t *testing.T) {
 func TestInternalTransition_Execute(t *testing.T) {
 	mockState := NewMockState(NilState)
 	mockEvent := NewMockEvent(mockStartEventId)
+	mockService := NewMockService()
 
 	transition := NewInternalTransition(mockEvent, NopAction)
-	assert.Equal(t, mockState, transition.Execute(mockState))
+	assert.Equal(t, mockState, transition.Execute(mockService, mockState))
 }
 
 func TestNewEndTransition(t *testing.T) {
@@ -46,7 +54,8 @@ func TestNewEndTransition(t *testing.T) {
 func TestEndTransition_Execute(t *testing.T) {
 	mockState := NewMockState(NilState)
 	mockEvent := NewMockEvent(mockStartEventId)
+	mockService := NewMockService()
 
 	transition := NewEndTransition(mockEvent, NopAction)
-	assert.Equal(t, NilState, transition.Execute(mockState))
+	assert.Equal(t, NilState, transition.Execute(mockService, mockState))
 }

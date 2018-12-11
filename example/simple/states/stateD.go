@@ -6,12 +6,15 @@ import (
 )
 
 type StateD struct {
+	srv 	*SimpleService
 	entered bool
 	exited  bool
 }
 
-func NewStateD() *StateD {
-	return &StateD{}
+func NewStateD(srv *SimpleService) *StateD {
+	return &StateD{
+		srv: srv,
+	}
 }
 
 func (s *StateD) Name() string {
@@ -19,15 +22,15 @@ func (s *StateD) Name() string {
 }
 
 func (s *StateD) OnEnter(event hsm.Event) hsm.State {
-	hsm.Precondition(!s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
-	fmt.Printf("->D;")
+	hsm.Precondition(s.srv, !s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
+	s.srv.Logger().Debug("->D;")
 	s.entered = true
 	return s
 }
 
 func (s *StateD) OnExit(event hsm.Event) hsm.State {
-	hsm.Precondition(!s.exited, fmt.Sprintf("State %s has already been entered", s.Name()))
-	fmt.Printf("<-D;")
+	hsm.Precondition(s.srv, !s.exited, fmt.Sprintf("State %s has already been entered", s.Name()))
+	s.srv.Logger().Debug("<-D;")
 	s.exited = true
 	return s.ParentState()
 }
@@ -53,7 +56,7 @@ func (s *StateD) ParentState() hsm.State {
 	return hsm.NilState
 }
 
-func action5() {
-	fmt.Printf("\nAction5\n")
+func action5(srv hsm.Service) {
+	srv.Logger().Debug("Action5")
 	LastActionIdExecuted = 5
 }

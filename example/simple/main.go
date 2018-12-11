@@ -33,12 +33,16 @@ func handleInput(events chan hsm.Event) {
 func main() {
 	logger, _ := zap.NewDevelopment()
 
-	startState := states.NewStateA(true)
-	stateMachineEngine := hsm.NewStateMachine(logger, startState)
+	simpleService := states.NewSimpleService(hsm.NewDefaultService(logger), "TestValue")
+	// Can also do this instead of initializing it above
+	simpleService.SetTest("TestValue")
+
+	startState := states.NewStateA(simpleService,true)
+	stateMachineEngine := hsm.NewStateMachine(simpleService, startState)
 
 	events := make(chan hsm.Event)
 	stateMachineEngine.Run(context.TODO(), events)
 
 	handleInput(events)
-	fmt.Printf("Done\n")
+	logger.Debug("Done\n")
 }
