@@ -25,17 +25,17 @@ func (s *MockState) Name() string {
 	return mockStateName
 }
 
-func (s *MockState) OnEnter(srv Service, event Event) State {
+func (s *MockState) OnEnter(event Event) State {
 	s.entered = true
 	return s
 }
 
-func (s *MockState) OnExit(srv Service, event Event) State {
+func (s *MockState) OnExit(event Event) State {
 	s.exited = true
 	return s.ParentState()
 }
 
-func (s *MockState) EventHandler(srv Service, event Event) Transition {
+func (s *MockState) EventHandler(event Event) Transition {
 	switch event.ID() {
 	case "start":
 		return NewInternalTransition(event, NopAction)

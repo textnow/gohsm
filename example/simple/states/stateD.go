@@ -6,33 +6,36 @@ import (
 )
 
 type StateD struct {
+	srv 	*SimpleService
 	entered bool
 	exited  bool
 }
 
-func NewStateD() *StateD {
-	return &StateD{}
+func NewStateD(srv *SimpleService) *StateD {
+	return &StateD{
+		srv: srv,
+	}
 }
 
 func (s *StateD) Name() string {
 	return "D"
 }
 
-func (s *StateD) OnEnter(srv hsm.Service, event hsm.Event) hsm.State {
-	hsm.Precondition(srv, !s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
-	srv.Logger().Debug("->D;")
+func (s *StateD) OnEnter(event hsm.Event) hsm.State {
+	hsm.Precondition(s.srv, !s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
+	s.srv.Logger().Debug("->D;")
 	s.entered = true
 	return s
 }
 
-func (s *StateD) OnExit(ctx hsm.Service, event hsm.Event) hsm.State {
-	hsm.Precondition(ctx, !s.exited, fmt.Sprintf("State %s has already been entered", s.Name()))
-	ctx.Logger().Debug("<-D;")
+func (s *StateD) OnExit(event hsm.Event) hsm.State {
+	hsm.Precondition(s.srv, !s.exited, fmt.Sprintf("State %s has already been entered", s.Name()))
+	s.srv.Logger().Debug("<-D;")
 	s.exited = true
 	return s.ParentState()
 }
 
-func (s *StateD) EventHandler(ctx hsm.Service, event hsm.Event) hsm.Transition {
+func (s *StateD) EventHandler(event hsm.Event) hsm.Transition {
 	switch event.ID() {
 	case ee.ID():
 		return hsm.NewEndTransition(event, action5)

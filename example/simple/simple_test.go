@@ -89,9 +89,10 @@ func (t *simpleHSMTest) setFieldAToTrue() error {
 
 func (t *simpleHSMTest) theSimpleHSMIsInitialized() error {
 	logger, _ := zap.NewDevelopment()
-	startState := states.NewStateA(t.a)
+	srv := states.NewSimpleService(hsm.NewDefaultService(logger), "test")
+	startState := states.NewStateA(srv, t.a)
 
-	t.sm = hsm.NewStateMachine(hsm.NewDefaultService(logger), startState)
+	t.sm = hsm.NewStateMachine(srv, startState)
 	t.startState = t.sm.CurrentState()
 	t.endState = t.sm.CurrentState()
 	return nil

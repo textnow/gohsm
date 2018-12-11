@@ -38,19 +38,19 @@ func (t *ExternalTransition) Execute(srv Service, fromState State) State {
 	// Call OnExit until one of the following is true:
 	//   - parentState is NilState
 	//   - parentState is equal to toState's parentState
-	parentState := fromState.OnExit(srv, t.event)
+	parentState := fromState.OnExit(t.event)
 	for !IsNilState(parentState) {
 		if !IsNilState(t.toState.ParentState()) && parentState.Name() == t.toState.ParentState().Name() {
 			break
 		}
-		parentState = parentState.OnExit(srv, t.event)
+		parentState = parentState.OnExit(t.event)
 	}
 
 	// Execute action on transition
 	t.action(srv)
 
 	// Enter toState and return new currentState
-	return t.toState.OnEnter(srv, t.event)
+	return t.toState.OnEnter(t.event)
 }
 
 // InternalTransition is a transition within a state where only the action() is performed.
@@ -93,9 +93,9 @@ func NewEndTransition(event Event, action Action) *EndTransition {
 // Action() is then called and nil is returned for the new current state
 func (t *EndTransition) Execute(srv Service, fromState State) State {
 	// Call OnExit
-	parentState := fromState.OnExit(srv, t.event)
+	parentState := fromState.OnExit(t.event)
 	for !IsNilState(parentState) {
-		parentState = parentState.OnExit(srv, t.event)
+		parentState = parentState.OnExit(t.event)
 	}
 
 	// Execute action on transition

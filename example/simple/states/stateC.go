@@ -6,15 +6,17 @@ import (
 )
 
 type StateC struct {
+	srv 		*SimpleService
 	parentState *StateA
 	entered     bool
 	exited      bool
 }
 
-func NewStateC(srv hsm.Service, parentState *StateA) *StateC {
+func NewStateC(srv *SimpleService, parentState *StateA) *StateC {
 	hsm.Precondition(srv, parentState != nil, fmt.Sprintf("NewStateC: parentState cannot be nil"))
 
 	return &StateC{
+		srv: srv,
 		parentState: parentState,
 	}
 }
@@ -23,24 +25,24 @@ func (s *StateC) Name() string {
 	return "C"
 }
 
-func (s *StateC) OnEnter(srv hsm.Service, event hsm.Event) hsm.State {
-	hsm.Precondition(srv, !s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
-	srv.Logger().Debug("->C;")
+func (s *StateC) OnEnter(event hsm.Event) hsm.State {
+	hsm.Precondition(s.srv, !s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
+	s.srv.Logger().Debug("->C;")
 	s.entered = true
 	return s
 }
 
-func (s *StateC) OnExit(srv hsm.Service, event hsm.Event) hsm.State {
-	hsm.Precondition(srv, !s.exited, fmt.Sprintf("State %s has already been entered", s.Name()))
-	srv.Logger().Debug("<-C;")
+func (s *StateC) OnExit(event hsm.Event) hsm.State {
+	hsm.Precondition(s.srv, !s.exited, fmt.Sprintf("State %s has already been entered", s.Name()))
+	s.srv.Logger().Debug("<-C;")
 	s.exited = true
 	return s.ParentState()
 }
 
-func (s *StateC) EventHandler(srv hsm.Service, event hsm.Event) hsm.Transition {
+func (s *StateC) EventHandler(event hsm.Event) hsm.Transition {
 	switch event.ID() {
 	case ex.ID():
-		return hsm.NewExternalTransition(event, NewStateC(srv, s.parentState), action6)
+		return hsm.NewExternalTransition(event, NewStateC(s.srv, s.parentState), action6)
 	case ey.ID():
 		return hsm.NewInternalTransition(event, action7)
 	default:

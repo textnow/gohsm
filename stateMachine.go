@@ -68,7 +68,7 @@ func (sm *StateMachine) CurrentState() State {
 }
 
 func (sm *StateMachine) initialize() {
-	sm.currentState = sm.currentState.OnEnter(sm.context, StartEvent)
+	sm.currentState = sm.currentState.OnEnter(StartEvent)
 	sm.context.Logger().Debug("state machine initialized",
 		zap.String("starting_state", sm.currentState.Name()),
 	)
@@ -78,7 +78,7 @@ func (sm *StateMachine) initialize() {
 // If no event handler is found then the event is dropped
 func (sm *StateMachine) HandleEvent(e Event) bool {
 	// Find an event handler (if none found then skip the event)
-	transition := sm.currentState.EventHandler(sm.context, e)
+	transition := sm.currentState.EventHandler(e)
 	parentState := sm.currentState.ParentState()
 	for IsNilTransition(transition) {
 		if IsNilState(parentState) {
@@ -86,7 +86,7 @@ func (sm *StateMachine) HandleEvent(e Event) bool {
 			return false
 		}
 
-		transition = parentState.EventHandler(sm.context, e)
+		transition = parentState.EventHandler(e)
 		parentState = parentState.ParentState()
 	}
 
