@@ -47,14 +47,14 @@ import (
 // StateMachine manages event processing as implemented by each State
 type StateMachine struct {
 	currentState State
-	context      Service
+	svc          Service
 }
 
 // StateMachine constructor
-func NewStateMachine(context Service, startState State) *StateMachine {
+func NewStateMachine(svc Service, startState State) *StateMachine {
 	sm := &StateMachine{
 		currentState: startState,
-		context: context,
+		svc:          svc,
 	}
 
 	// This will ensure we are in the proper state starting from the beginning.
@@ -69,7 +69,7 @@ func (sm *StateMachine) CurrentState() State {
 
 func (sm *StateMachine) initialize() {
 	sm.currentState = sm.currentState.OnEnter(StartEvent)
-	sm.context.Logger().Debug("state machine initialized",
+	sm.svc.Logger().Debug("state machine initialized",
 		zap.String("starting_state", sm.currentState.Name()),
 	)
 }
@@ -91,7 +91,7 @@ func (sm *StateMachine) HandleEvent(e Event) bool {
 	}
 
 	// Handle the event and update the current state
-	sm.currentState = transition.Execute(sm.context, sm.currentState)
+	sm.currentState = transition.Execute(sm.svc, sm.currentState)
 
 	return true
 }
@@ -107,29 +107,29 @@ func (sm *StateMachine) Run(ctx context.Context, events <-chan Event) {
 					return
 				}
 
-				sm.context.Logger().Debug("handling event",
+				sm.svc.Logger().Debug("handling event",
 					zap.String("event_id", e.ID()),
 					zap.String("current_state", sm.currentState.Name()),
 				)
 
 				handled := sm.HandleEvent(e)
 				if !handled {
-					sm.context.Logger().Debug("event not handled",
+					sm.svc.Logger().Debug("event not handled",
 						zap.String("event_id", e.ID()),
 					)
 					continue
 				}
 
 				if sm.currentState == nil {
-					sm.context.Logger().Debug("current state nil, terminating run loop")
+					sm.svc.Logger().Debug("current state nil, terminating run loop")
 					return
 				}
 
-				sm.context.Logger().Debug("handled event",
+				sm.svc.Logger().Debug("handled event",
 					zap.String("current_state", sm.currentState.Name()),
 				)
 			case <-ctx.Done():
-				sm.context.Logger().Debug("received done on context")
+				sm.svc.Logger().Debug("received done on svc")
 				return
 			}
 		}

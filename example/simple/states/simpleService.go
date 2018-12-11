@@ -14,16 +14,16 @@ type SimpleService struct {
 	hsm.Service
 }
 
-func ToSimpleService(ctx hsm.Service) *SimpleService {
+func ToSimpleService(svc hsm.Service) *SimpleService {
 	ss := SimpleService{
-		Service: ctx,
+		Service: svc,
 	}
 	return &ss
 }
 
-func NewSimpleService(ctx hsm.Service, test string) *SimpleService {
+func NewSimpleService(svc hsm.Service, test string) *SimpleService {
 	ss := &SimpleService{
-		Service: ctx,
+		Service: svc,
 	}
 
 	// Initial save into map in the HSM context
