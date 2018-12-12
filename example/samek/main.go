@@ -34,7 +34,7 @@ func main() {
 	srv := hsm.NewDefaultService(logger)
 
 	startState := states.NewS0State(srv)
-	stateMachineEngine := hsm.NewStateMachine(srv, startState)
+	stateMachineEngine := hsm.NewStateMachine(srv, startState, hsm.StartEvent)
 
 	events := make(chan hsm.Event)
 	stateMachineEngine.Run(context.TODO(), events)

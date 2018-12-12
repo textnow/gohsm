@@ -60,7 +60,7 @@ func (s *MockState) Exited() bool {
 
 func getStateMachine(t *testing.T, startState State) *StateMachine {
 	logger := zaptest.NewLogger(t)
-	stateMachine := NewStateMachine(NewDefaultService(logger), startState)
+	stateMachine := NewStateMachine(NewDefaultService(logger), startState, StartEvent)
 
 	return stateMachine
 }

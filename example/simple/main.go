@@ -38,7 +38,7 @@ func main() {
 	simpleService.SetTest("TestValue")
 
 	startState := states.NewStateA(simpleService,true)
-	stateMachineEngine := hsm.NewStateMachine(simpleService, startState)
+	stateMachineEngine := hsm.NewStateMachine(simpleService, startState, hsm.StartEvent)
 
 	events := make(chan hsm.Event)
 	stateMachineEngine.Run(context.TODO(), events)

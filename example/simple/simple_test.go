@@ -92,7 +92,7 @@ func (t *simpleHSMTest) theSimpleHSMIsInitialized() error {
 	srv := states.NewSimpleService(hsm.NewDefaultService(logger), "test")
 	startState := states.NewStateA(srv, t.a)
 
-	t.sm = hsm.NewStateMachine(srv, startState)
+	t.sm = hsm.NewStateMachine(srv, startState, hsm.StartEvent)
 	t.startState = t.sm.CurrentState()
 	t.endState = t.sm.CurrentState()
 	return nil

@@ -51,14 +51,14 @@ type StateMachine struct {
 }
 
 // StateMachine constructor
-func NewStateMachine(svc Service, startState State) *StateMachine {
+func NewStateMachine(svc Service, startState State, startEvent Event) *StateMachine {
 	sm := &StateMachine{
 		currentState: startState,
 		svc:          svc,
 	}
 
 	// This will ensure we are in the proper state starting from the beginning.
-	sm.initialize()
+	sm.initialize(startEvent)
 	return sm
 }
 
@@ -67,8 +67,8 @@ func (sm *StateMachine) CurrentState() State {
 	return sm.currentState
 }
 
-func (sm *StateMachine) initialize() {
-	sm.currentState = sm.currentState.OnEnter(StartEvent)
+func (sm *StateMachine) initialize(startEvent Event) {
+	sm.currentState = sm.currentState.OnEnter(startEvent)
 	sm.svc.Logger().Debug("state machine initialized",
 		zap.String("starting_state", sm.currentState.Name()),
 	)

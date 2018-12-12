@@ -7,12 +7,12 @@ type Event interface {
 
 // BaseEvent is a no-op event.
 type BaseEvent struct {
-	name string
+	Name string
 }
 
 // ID returns the event ID.
 func (be *BaseEvent) ID() string {
-	return be.name
+	return be.Name
 }
 
 // StartEvent is an event used to start a state machine evaluation.
