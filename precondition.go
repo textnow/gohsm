@@ -1,8 +1,13 @@
 package hsm
 
-func Precondition(srv Service, expression bool, message string) {
+import (
+	"go.uber.org/zap"
+)
+
+// Precondition causes a panic if expression is not true
+func Precondition(logger *zap.Logger, expression bool, message string) {
 	if !expression {
-		srv.Logger().Panic(message)
+		logger.Panic(message)
 		panic(message)
 	}
 }

@@ -31,10 +31,9 @@ func handleInput(events chan hsm.Event) {
 
 func main() {
 	logger, _ := zap.NewDevelopment()
-	srv := hsm.NewDefaultService(logger)
 
-	startState := states.NewS0State(srv)
-	stateMachineEngine := hsm.NewStateMachine(srv, startState, hsm.StartEvent)
+	startState := states.NewS0State(logger)
+	stateMachineEngine := hsm.NewStateMachine(logger, startState, hsm.StartEvent)
 
 	events := make(chan hsm.Event)
 	stateMachineEngine.Run(context.TODO(), events)

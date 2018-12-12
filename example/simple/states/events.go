@@ -4,16 +4,19 @@ import (
 	"strings"
 )
 
+// KeyPressEvent represents a keyboard entered event
 type KeyPressEvent struct {
 	input string
 }
 
+// NewKeyPressEvent constructor
 func NewKeyPressEvent(text string) *KeyPressEvent {
 	return &KeyPressEvent{
 		input: strings.Trim(text, "\n"),
 	}
 }
 
+// ID returns the events identifier
 func (kpe *KeyPressEvent) ID() string {
 	return kpe.input
 }
@@ -26,4 +29,5 @@ var ee = &KeyPressEvent{"e"}
 var ey = &KeyPressEvent{"y"}
 var ex = &KeyPressEvent{"x"}
 
+// LastActionIdExecuted helps with testing
 var LastActionIdExecuted = 0

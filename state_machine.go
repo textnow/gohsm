@@ -1,9 +1,11 @@
 /*
-HSM provides the framework for Hierarchical State Machine implementations.
+Package hsm provides the framework for Hierarchical State Machine implementations.
 
 Related Documents:
-    - State Driven Development: https://confluence.enflick.com/x/3YwuAg
-    - Go State Machine Framework: https://confluence.enflick.com/x/9AIgAw
+    - Introduction to Hierarchical State Machines: https://barrgroup.com/Embedded-Systems/How-To/Introduction-Hierarchical-State-Machines
+    - Yet Another Hierarchical State Machine: https://accu.org/index.php/journals/252
+    - State Diagram: https://en.wikipedia.org/wiki/State_diagram
+    - gohsm Object Model: go_state_machine_framework.png
 
 Included in this framework are the following components:
 
@@ -47,14 +49,14 @@ import (
 // StateMachine manages event processing as implemented by each State
 type StateMachine struct {
 	currentState State
-	svc          Service
+	logger       *zap.Logger
 }
 
-// StateMachine constructor
-func NewStateMachine(svc Service, startState State, startEvent Event) *StateMachine {
+// NewStateMachine constructor
+func NewStateMachine(logger *zap.Logger, startState State, startEvent Event) *StateMachine {
 	sm := &StateMachine{
 		currentState: startState,
-		svc:          svc,
+		logger:       logger,
 	}
 
 	// This will ensure we are in the proper state starting from the beginning.
@@ -69,7 +71,7 @@ func (sm *StateMachine) CurrentState() State {
 
 func (sm *StateMachine) initialize(startEvent Event) {
 	sm.currentState = sm.currentState.OnEnter(startEvent)
-	sm.svc.Logger().Debug("state machine initialized",
+	sm.logger.Debug("state machine initialized",
 		zap.String("starting_state", sm.currentState.Name()),
 	)
 }
@@ -91,7 +93,7 @@ func (sm *StateMachine) HandleEvent(e Event) bool {
 	}
 
 	// Handle the event and update the current state
-	sm.currentState = transition.Execute(sm.svc, sm.currentState)
+	sm.currentState = transition.Execute(sm.logger, sm.currentState)
 
 	return true
 }
@@ -107,29 +109,29 @@ func (sm *StateMachine) Run(ctx context.Context, events <-chan Event) {
 					return
 				}
 
-				sm.svc.Logger().Debug("handling event",
+				sm.logger.Debug("handling event",
 					zap.String("event_id", e.ID()),
 					zap.String("current_state", sm.currentState.Name()),
 				)
 
 				handled := sm.HandleEvent(e)
 				if !handled {
-					sm.svc.Logger().Debug("event not handled",
+					sm.logger.Debug("event not handled",
 						zap.String("event_id", e.ID()),
 					)
 					continue
 				}
 
 				if sm.currentState == nil {
-					sm.svc.Logger().Debug("current state nil, terminating run loop")
+					sm.logger.Debug("current state nil, terminating run loop")
 					return
 				}
 
-				sm.svc.Logger().Debug("handled event",
+				sm.logger.Debug("handled event",
 					zap.String("current_state", sm.currentState.Name()),
 				)
 			case <-ctx.Done():
-				sm.svc.Logger().Debug("received done on svc")
+				sm.logger.Debug("received done on svc")
 				return
 			}
 		}

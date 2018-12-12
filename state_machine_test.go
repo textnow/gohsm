@@ -12,24 +12,24 @@ func TestNewStateMachine(t *testing.T) {
 }
 
 type handleEventTest struct {
-	eventId          string
+	eventID          string
 	result           bool
 	currentStateName string
 }
 
 var handleEventTests = []handleEventTest{
 	{
-		eventId:          mockStartEventId,
+		eventID:          mockStartEventID,
 		result:           true,
 		currentStateName: mockStateName,
 	},
 	{
-		eventId:          mockSkipEventId,
+		eventID:          mockSkipEventID,
 		result:           false,
 		currentStateName: mockStateName,
 	},
 	{
-		eventId:          mockEndEventId,
+		eventID:          mockEndEventID,
 		result:           true,
 		currentStateName: "",
 	},
@@ -40,7 +40,7 @@ func TestHandleEvent(t *testing.T) {
 		startState := NewMockState(NilState)
 		stateMachine := getStateMachine(t, startState)
 
-		event := NewMockEvent(tt.eventId)
+		event := NewMockEvent(tt.eventID)
 		result := stateMachine.HandleEvent(event)
 
 		assert.Equal(t, result, tt.result)

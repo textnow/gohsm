@@ -4,16 +4,19 @@ import (
 	"strings"
 )
 
+// KeyPressEvent represents an keyboard entered event
 type KeyPressEvent struct {
 	input string
 }
 
+// NewKeyPressEvent constructor
 func NewKeyPressEvent(text string) *KeyPressEvent {
 	return &KeyPressEvent{
 		input: strings.Trim(text, "\n"),
 	}
 }
 
+// ID returns the event's id
 func (kpe *KeyPressEvent) ID() string {
 	return kpe.input
 }
