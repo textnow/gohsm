@@ -1,7 +1,7 @@
 package hsm
 
 import (
-	"github.com/Enflick/textnow-mono/bazel-textnow-mono/external/go_sdk/src/fmt"
+	"fmt"
 	"go.uber.org/zap"
 )
 
