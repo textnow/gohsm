@@ -8,6 +8,5 @@ import (
 func Precondition(logger *zap.Logger, expression bool, message string) {
 	if !expression {
 		logger.Panic(message)
-		panic(message)
 	}
 }

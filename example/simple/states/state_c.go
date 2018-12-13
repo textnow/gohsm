@@ -6,7 +6,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// StateA represents State A
+// StateC represents State C
 type StateC struct {
 	logger      *zap.Logger
 	parentState *StateA
@@ -74,10 +74,10 @@ func (s *StateC) ParentState() hsm.State {
 
 func action6(logger *zap.Logger) {
 	logger.Debug("Action6")
-	LastActionIdExecuted = 6
+	LastActionIDExecuted = 6
 }
 
 func action7(logger *zap.Logger) {
 	logger.Debug("Action7")
-	LastActionIdExecuted = 7
+	LastActionIDExecuted = 7
 }

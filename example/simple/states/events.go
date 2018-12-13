@@ -29,5 +29,5 @@ var ee = &KeyPressEvent{"e"}
 var ey = &KeyPressEvent{"y"}
 var ex = &KeyPressEvent{"x"}
 
-// LastActionIdExecuted helps with testing
-var LastActionIdExecuted = 0
+// LastActionIDExecuted helps with testing
+var LastActionIDExecuted = 0

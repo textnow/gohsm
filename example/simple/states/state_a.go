@@ -35,9 +35,8 @@ func (s *StateA) OnEnter(event hsm.Event) hsm.State {
 
 	if s.a {
 		return NewStateB(s.logger, s).OnEnter(event)
-	} else {
-		return NewStateC(s.logger, s).OnEnter(event)
 	}
+	return NewStateC(s.logger, s).OnEnter(event)
 }
 
 // OnExit exits this state and returns the parentState or NilParentState
@@ -79,15 +78,15 @@ func (s *StateA) ParentState() hsm.State {
 
 func action2(logger *zap.Logger) {
 	logger.Debug("Action2")
-	LastActionIdExecuted = 2
+	LastActionIDExecuted = 2
 }
 
 func action3(logger *zap.Logger) {
 	logger.Debug("Action3")
-	LastActionIdExecuted = 3
+	LastActionIDExecuted = 3
 }
 
 func action4(logger *zap.Logger) {
 	logger.Debug("Action4")
-	LastActionIdExecuted = 4
+	LastActionIDExecuted = 4
 }

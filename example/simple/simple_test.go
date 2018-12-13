@@ -60,7 +60,7 @@ func SimpleHSMContext(s *godog.Suite) {
 		test.startState = hsm.NilState
 		test.endState = hsm.NilState
 		test.a = false
-		states.LastActionIdExecuted = 0
+		states.LastActionIDExecuted = 0
 
 		switch v := s.(type) {
 		case *gherkin.Scenario:
@@ -175,7 +175,7 @@ func (t *simpleHSMTest) theEventIsGenerated(event string) error {
 }
 
 func (t *simpleHSMTest) theActionIsExecuted(actionID int) error {
-	if states.LastActionIdExecuted != actionID {
+	if states.LastActionIDExecuted != actionID {
 		return fmt.Errorf("expected action %d to executed, but it was not", actionID)
 	}
 	return nil
