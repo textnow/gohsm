@@ -1,33 +1,52 @@
 # gohsm
 
 ## Introduction
+HSM provides the framework for Hierarchical State Machine implementations.
 
-This library provides a Golang implementation of a Hierarchical State Machine (HSM). This library uses several sources for implementation specification, including:
- - [Miro Samek](https://barrgroup.com/Embedded-Systems/How-To/Introduction-Hierarchical-State-Machines)
- - [Stefan Heinzmann](https://accu.org/index.php/journals/252)
+## Related Documents:
+ - [Introduction to Hierarchical State Machines](https://barrgroup.com/Embedded-Systems/How-To/Introduction-Hierarchical-State-Machines)
+ - [Yet Another Hierarchical State Machine](https://accu.org/index.php/journals/252)
+ - [State Diagram](https://en.wikipedia.org/wiki/State_diagram)
+ - gohsm Object Model: go_state_machine_framework.png
 
-Two sample HSMs have been implemented in the example/ directory.
+## Framework Overview
+Included in this framework are the following components:
 
-The HSM implemented here contains 3 key types:
- 1. the State interface
- 2. the Transition interface
- 3. the StateMachineEngine
+  - **StateMachine**:
+    Machine that controls the event processing
 
-The StateMachineEngine represents a single instance of a running state machine; it consists of a run loop which consumes events from the supplied 'events' channel and passes them to the HSM for processing.
+  - **State**:
+    Interface that must be implemented by all States in the StateMachine
 
-The State interface is implemented by two concrete implementations of a State:
- 1. the LeafState
- 2. the CompositeState
+  - **Transition**:
+    Interface that is implemented by each of the different types of transitions:
 
-A LeafState instance represents a state with no sub-states; a CompositeState instance represents a state with sub-states. Both LeafStates and CompositeStates can have transitions into and out of them. During operation (when not processing an event) the current state of the StateMachineEngine is always a LeafState; CompositeStates are processed along the way but are never 'resting' states. As events are received the set of registered transitions on the current state are examined; if a registered transition is found the HSM will (potentially) traverse up the hierarchy of the state machine to find the common parent and then descend the hierarchy to the target of the transition. Along the way the parent states left will have their OnExit methods invoked; as we descend to the target we will invoke the OnEnter methods of each state found. As the HSM is always resting in a LeafState we will continue down until a LeafState is reached (calling any OnEnters necessary).
+      - **ExternalTransition**:
+        Transition from current state to a different state.  On execution the following takes place:
+          1. OnExit is called on the current state and all parent states up to the parent state that owns
+             the new state (or the parent state is nil)
+          2. action() associated with the the transition is called
+          3. OnEnter() is called on the new state which may call OnEnter() for a sub-state.  The final
+             new current state is returned by the OnEnter() call
 
-Transitions represent different ways to get from one state to another. The default transition is a direct transition, which simply goes from the origin state to the destination state. If more complex logic is required, a conditional transition can be used. Conditional transitions will invoke a method supplied during initialization to determine which state to transition to.
+      - **InternalTransition**:
+        Transition within the current state.  On execution the following takes place:
+          1. action() associated with the the transition is called
 
-This library does not currently implement guard conditions on transitions.
+      - **EndTransition**:
+        Transition from current state that terminates the state machine.  On execution the following takes place:
+          1. OnExit is called on the current state and all parent states until there are no more parent states
+          2. action() associated with the the transition is called
+
+  - **Event**:
+    An event represents something that has happened (login, logout, newCall, networkChange, etc.) that might drive
+    a change in the state machine
 
 ## How To Use
-
 1. Define the set of events that will be processed.
-2. Define all of the states that are possible. Start with the leaf states, then work upwards to the top state, as this will ensure you can always supply the state into its parents constructor.
-3. Define the state transitions once all of the states have been declared (and group the transitions by the starting state). This will make it much easier to reason about transitions that are occurring.
-4. Create the state machine engine, and then begin processing events.
+2. Define all of the states that are possible.  For each state, implement the methods required by the State interface
+4. Create the state machine, and hand it the starting state
+5. Call Run on the state machine
+
+## Example Usage
+Two sample HSMs have been implemented in the example/ directory.

@@ -2,6 +2,50 @@
 
 
 [[projects]]
+  digest = "1:054a3c766b1a0ca45685ccef8043c578ae076d94984c2f8332c5c4f547a12217"
+  name = "github.com/DATA-DOG/godog"
+  packages = [
+    ".",
+    "colors",
+    "gherkin",
+  ]
+  pruneopts = "UT"
+  revision = "d9b8b88dd73a1251283326c95f6b53cc99917849"
+  version = "v0.7.8"
+
+[[projects]]
+  digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
+  name = "github.com/davecgh/go-spew"
+  packages = ["spew"]
+  pruneopts = "UT"
+  revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
+  version = "v1.1.1"
+
+[[projects]]
+  digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
+  name = "github.com/pmezard/go-difflib"
+  packages = ["difflib"]
+  pruneopts = "UT"
+  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
+  version = "v1.0.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:b6b60e3b62990010f6fd99a09cb04004cadb5982074889cd2b608f9223886661"
+  name = "github.com/rmrobinson-textnow/gohsm"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "c4e46af82f3760b88b5d3c14552eb0b448993ecd"
+
+[[projects]]
+  digest = "1:18752d0b95816a1b777505a97f71c7467a8445b8ffb55631a7bf779f6ba4fa83"
+  name = "github.com/stretchr/testify"
+  packages = ["assert"]
+  pruneopts = "UT"
+  revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
+  version = "v1.2.2"
+
+[[projects]]
   digest = "1:777e729b475d3895c7229552aa10076f0d177daf37c0a72258006d046d329960"
   name = "go.uber.org/atomic"
   packages = ["."]
@@ -18,7 +62,7 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:c52caf7bd44f92e54627a31b85baf06a68333a196b3d8d241480a774733dcf8b"
+  digest = "1:d0786a018883b4b84c06e8b5d75b6f2797a4b8e489f860c587f57a43a7459108"
   name = "go.uber.org/zap"
   packages = [
     ".",
@@ -26,7 +70,9 @@
     "internal/bufferpool",
     "internal/color",
     "internal/exit",
+    "internal/ztest",
     "zapcore",
+    "zaptest",
   ]
   pruneopts = "UT"
   revision = "ff33455a0e382e8a81d14dd7c922020b6b5e7982"
@@ -35,6 +81,13 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  input-imports = ["go.uber.org/zap"]
+  input-imports = [
+    "github.com/DATA-DOG/godog",
+    "github.com/DATA-DOG/godog/gherkin",
+    "github.com/rmrobinson-textnow/gohsm",
+    "github.com/stretchr/testify/assert",
+    "go.uber.org/zap",
+    "go.uber.org/zap/zaptest",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
