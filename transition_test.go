@@ -7,7 +7,7 @@ import (
 )
 
 func TestNewExternalTransition(t *testing.T) {
-	mockState := NewMockState(NilState)
+	mockState := NewMockState(nil)
 	mockEvent := NewMockEvent(mockStartEventID)
 
 	transition := NewExternalTransition(mockEvent, mockState, NopAction)
@@ -15,7 +15,7 @@ func TestNewExternalTransition(t *testing.T) {
 }
 
 func TestExternalTransition_Execute(t *testing.T) {
-	mockState := NewMockState(NilState)
+	mockState := NewMockState(nil)
 	mockEvent := NewMockEvent(mockStartEventID)
 	logger, _ := zap.NewDevelopment()
 
@@ -31,7 +31,7 @@ func TestNewInternalTransition(t *testing.T) {
 }
 
 func TestInternalTransition_Execute(t *testing.T) {
-	mockState := NewMockState(NilState)
+	mockState := NewMockState(nil)
 	mockEvent := NewMockEvent(mockStartEventID)
 	logger, _ := zap.NewDevelopment()
 
@@ -47,10 +47,10 @@ func TestNewEndTransition(t *testing.T) {
 }
 
 func TestEndTransition_Execute(t *testing.T) {
-	mockState := NewMockState(NilState)
+	mockState := NewMockState(nil)
 	mockEvent := NewMockEvent(mockStartEventID)
 	logger, _ := zap.NewDevelopment()
 
 	transition := NewEndTransition(mockEvent, NopAction)
-	assert.Equal(t, NilState, transition.Execute(logger, mockState))
+	assert.Nil(t, transition.Execute(logger, mockState))
 }

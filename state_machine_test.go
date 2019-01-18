@@ -6,7 +6,7 @@ import (
 )
 
 func TestNewStateMachine(t *testing.T) {
-	startState := NewMockState(NilState)
+	startState := NewMockState(nil)
 	stateMachine := getStateMachine(t, startState)
 	assert.Equal(t, startState, stateMachine.currentState)
 }
@@ -37,7 +37,7 @@ var handleEventTests = []handleEventTest{
 
 func TestHandleEvent(t *testing.T) {
 	for _, tt := range handleEventTests {
-		startState := NewMockState(NilState)
+		startState := NewMockState(nil)
 		stateMachine := getStateMachine(t, startState)
 
 		event := NewMockEvent(tt.eventID)
@@ -45,10 +45,10 @@ func TestHandleEvent(t *testing.T) {
 
 		assert.Equal(t, result, tt.result)
 		if tt.currentStateName != "" {
-			assert.False(t, IsNilState(stateMachine.currentState))
+			assert.NotNil(t, stateMachine.currentState)
 			assert.Equal(t, stateMachine.currentState.Name(), tt.currentStateName)
 		} else {
-			assert.True(t, IsNilState(stateMachine.currentState))
+			assert.Nil(t, stateMachine.currentState)
 		}
 	}
 }

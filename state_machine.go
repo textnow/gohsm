@@ -14,6 +14,8 @@ Included in this framework are the following components:
 
   - State:
     Interface that must be implemented by all States in the StateMachine
+    Composed of an InternalState interface that is implemented by BaseState
+    and an ExternalState interface whose methods must be implemented by each state in the state machine
 
   - Transition:
     Interface that is implemented by each of the different types of transitions:
@@ -64,7 +66,7 @@ func NewStateMachine(logger *zap.Logger, startState State, startEvent Event) *St
 	return sm
 }
 
-// CurrentState returns the state machine's current state
+// CurrentState getter
 func (sm *StateMachine) CurrentState() State {
 	return sm.currentState
 }
@@ -80,14 +82,17 @@ func (sm *StateMachine) initialize(startEvent Event) {
 // If no event handler is found then the event is dropped
 func (sm *StateMachine) HandleEvent(e Event) bool {
 	// Find an event handler (if none found then skip the event)
+	sm.logger.Debug("HandleEvent: checking if event " + e.ID() + " is handled in state " + sm.currentState.Name())
 	transition := sm.currentState.EventHandler(e)
 	parentState := sm.currentState.ParentState()
-	for IsNilTransition(transition) {
-		if IsNilState(parentState) {
+	for transition == nil {
+		if parentState == nil {
+			sm.logger.Debug("HandleEvent: state " + sm.currentState.Name() + " has a nil parentState ... fuck!!!")
 			// Skip event handling
 			return false
 		}
 
+		sm.logger.Debug("HandleEvent: checking if event " + e.ID() + " is handled in state " + parentState.Name())
 		transition = parentState.EventHandler(e)
 		parentState = parentState.ParentState()
 	}
