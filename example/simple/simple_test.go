@@ -52,13 +52,13 @@ func SimpleHSMContext(s *godog.Suite) {
 	// We use the same API across scenarios, this reduces isolation to catch
 	// long-chain errors (pointer issues, etc.)
 	s.BeforeSuite(func() {
-		test.startState = hsm.NilState
-		test.endState = hsm.NilState
+		test.startState = nil
+		test.endState = nil
 	})
 
 	s.BeforeScenario(func(s interface{}) {
-		test.startState = hsm.NilState
-		test.endState = hsm.NilState
+		test.startState = nil
+		test.endState = nil
 		test.a = false
 		states.LastActionIDExecuted = 0
 
@@ -106,7 +106,7 @@ func (t *simpleHSMTest) currentStateIs(state string) error {
 
 func (t *simpleHSMTest) theStateIsEntered(stateName string) error {
 	// Search the end state and all parent states for the desired state to check that it has been entered
-	for state := t.endState; !hsm.IsNilState(state); state = state.ParentState() {
+	for state := t.endState; state != nil; state = state.ParentState() {
 		if state.Entered() {
 			fmt.Printf("State %s entered = true\n", state.Name())
 		} else {
@@ -126,7 +126,7 @@ func (t *simpleHSMTest) theStateIsEntered(stateName string) error {
 
 func (t *simpleHSMTest) theStateIsExited(stateName string) error {
 	// Search the start state and all parent states for the desired state to check that it has been exited
-	for state := t.startState; !hsm.IsNilState(state); state = state.ParentState() {
+	for state := t.startState; state != nil; state = state.ParentState() {
 		if state.Name() == stateName {
 			if !state.Exited() {
 				return fmt.Errorf("expected state %s to be exited", stateName)
@@ -140,7 +140,7 @@ func (t *simpleHSMTest) theStateIsExited(stateName string) error {
 
 func (t *simpleHSMTest) theStateIsNotEntered(stateName string) error {
 	// Search the end state and all parent states for the desired state to check that it has not been entered
-	for state := t.endState; !hsm.IsNilState(state); state = state.ParentState() {
+	for state := t.endState; state != nil; state = state.ParentState() {
 		if state.Name() == stateName {
 			if state.Entered() {
 				return fmt.Errorf("expected state %s to NOT be entered", stateName)
@@ -154,7 +154,7 @@ func (t *simpleHSMTest) theStateIsNotEntered(stateName string) error {
 
 func (t *simpleHSMTest) theStateIsNotExited(stateName string) error {
 	// Search the start state and all parent states for the desired state to check that it has not been exited
-	for state := t.startState; !hsm.IsNilState(state); state = state.ParentState() {
+	for state := t.startState; state != nil; state = state.ParentState() {
 		if state.Name() == stateName {
 			if state.Exited() {
 				return fmt.Errorf("expected state %s to NOT be exited", stateName)

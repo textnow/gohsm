@@ -42,8 +42,8 @@ func (t *ExternalTransition) Execute(logger *zap.Logger, fromState State) State 
 	//   - infinite loop detected
 	parentState := fromState.OnExit(t.event)
 	loopCounter := 0
-	for !IsNilState(parentState) {
-		if !IsNilState(t.toState.ParentState()) && parentState.Name() == t.toState.ParentState().Name() {
+	for parentState != nil {
+		if (t.toState.ParentState() != nil) && parentState.Name() == t.toState.ParentState().Name() {
 			break
 		}
 		parentState = parentState.OnExit(t.event)
@@ -54,7 +54,7 @@ func (t *ExternalTransition) Execute(logger *zap.Logger, fromState State) State 
 	// Execute action on transition
 	t.action(logger)
 
-	// Enter toState and return new currentState
+	// OnEnter toState and return new currentState
 	return t.toState.OnEnter(t.event)
 }
 
@@ -100,7 +100,7 @@ func (t *EndTransition) Execute(logger *zap.Logger, fromState State) State {
 	// Call OnExit
 	parentState := fromState.OnExit(t.event)
 	loopCounter := 0
-	for !IsNilState(parentState) {
+	for parentState != nil {
 		parentState = parentState.OnExit(t.event)
 
 		loopCounter++
@@ -111,22 +111,5 @@ func (t *EndTransition) Execute(logger *zap.Logger, fromState State) State {
 	t.action(logger)
 
 	// All done - turn out the lights
-	return NilState
-}
-
-// UndefinedTransition is used to define NilTransition
-type UndefinedTransition struct{}
-
-// Execute executes the transition
-func (tr *UndefinedTransition) Execute(logger *zap.Logger, fromState State) State {
-	panic("'Execute called on NilTransition - not cool!")
-}
-
-// NilTransition defines a nil transition
-var NilTransition = &UndefinedTransition{}
-
-// IsNilTransition returns true if the passed in transition is of type UndefinedTransition
-func IsNilTransition(transition Transition) bool {
-	_, ok := transition.(*UndefinedTransition)
-	return ok
+	return nil
 }

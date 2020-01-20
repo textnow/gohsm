@@ -8,45 +8,31 @@ import (
 
 // S2State represents State S2
 type S2State struct {
-	logger      *zap.Logger
-	parentState *S0State
-	entered     bool
-	exited      bool
+	hsm.BaseState
 }
 
 // NewS2State constructor
-func NewS2State(logger *zap.Logger, parentState *S0State) *S2State {
+func NewS2State(logger *zap.Logger, parentState hsm.State) *S2State {
 	hsm.Precondition(logger, parentState != nil, fmt.Sprintf("NewS2State: parentState cannot be nil"))
 
 	state := &S2State{
-		logger:      logger,
-		parentState: parentState,
+		BaseState: *hsm.NewBaseState("S2", parentState, logger),
 	}
 
 	return state
 }
 
-// Name returns the state's name
-func (s *S2State) Name() string {
-	return "S2"
-}
-
 // OnEnter enters this state
 func (s *S2State) OnEnter(event hsm.Event) hsm.State {
-	hsm.Precondition(s.logger, !s.entered, fmt.Sprintf("State %s has already been entered", s.Name()))
-	s.logger.Debug("->S2;")
-	s.entered = true
-
-	stateS21 := NewS21State(s.logger, s)
-
-	return stateS21.OnEnter(event)
+	s.VerifyNotEntered()
+	s.Logger().Debug("->S2;")
+	return NewS21State(s.Logger(), s).OnEnter(event)
 }
 
-// OnExit enters this state
+// OnExit exits this state
 func (s *S2State) OnExit(event hsm.Event) hsm.State {
-	hsm.Precondition(s.logger, !s.exited, fmt.Sprintf("State %s has already been exited", s.Name()))
-	s.logger.Debug("<-S2;")
-	s.exited = true
+	s.VerifyNotExited()
+	s.Logger().Debug("<-S2;")
 	return s.ParentState()
 }
 
@@ -54,25 +40,10 @@ func (s *S2State) OnExit(event hsm.Event) hsm.State {
 func (s *S2State) EventHandler(event hsm.Event) hsm.Transition {
 	switch event.ID() {
 	case ec.ID():
-		return hsm.NewExternalTransition(event, NewS1State(s.logger, s.parentState), hsm.NopAction)
+		return hsm.NewExternalTransition(event, NewS1State(s.Logger(), s.ParentState()), hsm.NopAction)
 	case ef.ID():
-		return hsm.NewExternalTransition(event, NewS1State(s.logger, s.parentState), hsm.NopAction)
+		return hsm.NewExternalTransition(event, NewS1State(s.Logger(), s.ParentState()), hsm.NopAction)
 	default:
-		return hsm.NilTransition
+		return nil
 	}
-}
-
-// ParentState returns the parentState or NilState
-func (s *S2State) ParentState() hsm.State {
-	return s.parentState
-}
-
-// Entered returns true if this state have been entered
-func (s *S2State) Entered() bool {
-	return s.entered
-}
-
-// Exited returns true if this state have been exited
-func (s *S2State) Exited() bool {
-	return s.exited
 }

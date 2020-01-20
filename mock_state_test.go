@@ -1,6 +1,7 @@
 package hsm
 
 import (
+	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 	"testing"
 )
@@ -49,7 +50,7 @@ func (s *MockState) EventHandler(event Event) Transition {
 		return NewEndTransition(event, NopAction)
 	}
 
-	return NilTransition
+	return nil
 }
 
 // ParentState gets this state's parentState
@@ -65,6 +66,21 @@ func (s *MockState) Entered() bool {
 // Exited returns true if this state has been exited
 func (s *MockState) Exited() bool {
 	return s.exited
+}
+
+// Logger getter
+func (s *MockState) Logger() *zap.Logger {
+	return nil
+}
+
+// VerifyNotEntered makes sure that this state is only entered once
+func (s *MockState) VerifyNotEntered() {
+	return
+}
+
+// VerifyNotExited make sure that this state is only exited once
+func (s *MockState) VerifyNotExited() {
+	return
 }
 
 func getStateMachine(t *testing.T, startState State) *StateMachine {
